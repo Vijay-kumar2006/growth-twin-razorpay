@@ -46,6 +46,7 @@ export declare class MCPEngine {
     private evaluateGrowthPolicy;
     private getCommerceContract;
     private simulateTradeoffs;
+    private recoverFailedTransaction;
 }
 export declare const globalMCPEngine: MCPEngine;
 export declare const handleMCPRequest: (body: any) => Promise<any>;

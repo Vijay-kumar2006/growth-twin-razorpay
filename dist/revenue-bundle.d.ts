@@ -53,6 +53,32 @@ export interface TradeoffSimulationResult {
     mode: 'mock';
     label: 'Demo/Test Simulation';
 }
+export interface PaymentRecoveryOption {
+    optionId: string;
+    title: string;
+    recoveryStrategy: 'SAME_QUOTE_RETRY' | 'REMOVE_LOWEST_PRIORITY_ADDON' | 'DOWNGRADE_OPTIONAL_SKU';
+    changedItems: {
+        action: 'RETRY' | 'REMOVED' | 'SUBSTITUTED';
+        productId: string;
+        productName: string;
+        originalPrice: number;
+        newPrice?: number;
+    }[];
+    preservedHardConstraints: string[];
+    relaxedConstraints: string[];
+    finalTotal: number;
+    recoveredRevenue: number;
+    requiresApproval: boolean;
+    explanation: string;
+}
+export interface PaymentRecoveryResult {
+    failedQuoteId: string;
+    failureReason: string;
+    originalTotal: number;
+    recoveryOptions: PaymentRecoveryOption[];
+    mode: 'mock';
+    label: 'Demo/Test Simulation';
+}
 export declare function scoreAddons(baseItems: CatalogItem[], availableAddons: CatalogItem[], intent: BuyerIntent): ScoredAddon[];
 /**
  * Constraint Trade-off Simulator / Safe Negotiation Mode
@@ -60,4 +86,27 @@ export declare function scoreAddons(baseItems: CatalogItem[], availableAddons: C
  * Hard constraints (e.g. 'jain', dietary) are NEVER relaxed. Only soft preferences (packaging, expedited delivery, premium note) may be relaxed.
  */
 export declare function simulateConstraintTradeoffs(baseItems: CatalogItem[], availableAddons: CatalogItem[], intent: BuyerIntent, maxUnapprovedThreshold?: number): TradeoffSimulationResult;
+/**
+ * Adaptive Payment Recovery / Revenue Recovery Agent
+ * Deterministically generates recovery pathways when a checkout or bank gateway transaction fails.
+ * Never relaxes hard constraints. Preserves quote integrity while offering recovery routes.
+ */
+export declare function generatePaymentRecoveryOptions(failedQuote: {
+    quoteId: string;
+    totalAmount: number;
+    baseItems: {
+        id: string;
+        name: string;
+        unitPrice: number;
+        quantity: number;
+    }[];
+    addonItems: {
+        id: string;
+        name: string;
+        unitPrice: number;
+        quantity: number;
+    }[];
+    productTags: string[];
+    hardConstraints?: string[];
+}, failureReason?: string, maxUnapprovedThreshold?: number): PaymentRecoveryResult;
 //# sourceMappingURL=revenue-bundle.d.ts.map

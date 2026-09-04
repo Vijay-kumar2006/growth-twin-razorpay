@@ -65,7 +65,34 @@ async function runTests() {
     console.assert(alt.preservedConstraints.includes('jain'), "Hard constraint 'jain' must be preserved");
   });
 
-  // 4. Razorpay Mock Adapter Tests (Idempotency and Failure Recovery)
+  // 4. Adaptive Payment Recovery Engine Tests
+  console.log("Testing Adaptive Payment Recovery Engine...");
+  const { generatePaymentRecoveryOptions } = await import('../lib/revenue-bundle');
+  const failedQuote = {
+    quoteId: 'cart_test_failed_01',
+    totalAmount: 19250,
+    baseItems: [{ id: 'b1', name: 'Jain Hamper', unitPrice: 500, quantity: 25 }],
+    addonItems: [
+      { id: 'a1', name: 'Jain Sweets', unitPrice: 100, quantity: 25 },
+      { id: 'a2', name: 'Premium Note', unitPrice: 50, quantity: 25 },
+      { id: 'a3', name: 'Friday Priority Shipping', unitPrice: 120, quantity: 25 },
+    ],
+    productTags: ['jain', 'gifting'],
+    hardConstraints: ['jain'],
+  };
+
+  const recoveryResult = generatePaymentRecoveryOptions(failedQuote, 'GATEWAY_CARD_NETWORK_TIMEOUT', 20000);
+  console.assert(recoveryResult.recoveryOptions.length >= 2, "Must return at least 2 recovery options");
+  console.assert(recoveryResult.failedQuoteId === 'cart_test_failed_01', "Must preserve failed quote ID");
+  
+  recoveryResult.recoveryOptions.forEach(opt => {
+    console.assert(opt.preservedHardConstraints.includes('jain'), "Hard constraint 'jain' must be preserved in all recovery options");
+    console.assert(!opt.relaxedConstraints.includes('jain'), "Hard constraint 'jain' must NEVER be relaxed");
+    console.assert(opt.recoveredRevenue > 0, "Recovered revenue must be positive");
+    console.assert(typeof opt.requiresApproval === 'boolean', "Approval requirement must be explicit boolean");
+  });
+
+  // 5. Razorpay Mock Adapter Tests (Idempotency and Failure Recovery)
   console.log("Testing Razorpay Adapter: Failure Recovery");
   const adapter = new MockRazorpayAdapter();
   const order = await adapter.createOrder({ amount: 1800000, currency: "INR", receipt: "rcpt_1" });

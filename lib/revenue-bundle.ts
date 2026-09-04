@@ -48,6 +48,34 @@ export interface TradeoffSimulationResult {
   label: 'Demo/Test Simulation';
 }
 
+export interface PaymentRecoveryOption {
+  optionId: string;
+  title: string;
+  recoveryStrategy: 'SAME_QUOTE_RETRY' | 'REMOVE_LOWEST_PRIORITY_ADDON' | 'DOWNGRADE_OPTIONAL_SKU';
+  changedItems: {
+    action: 'RETRY' | 'REMOVED' | 'SUBSTITUTED';
+    productId: string;
+    productName: string;
+    originalPrice: number;
+    newPrice?: number;
+  }[];
+  preservedHardConstraints: string[];
+  relaxedConstraints: string[];
+  finalTotal: number;
+  recoveredRevenue: number;
+  requiresApproval: boolean;
+  explanation: string;
+}
+
+export interface PaymentRecoveryResult {
+  failedQuoteId: string;
+  failureReason: string;
+  originalTotal: number;
+  recoveryOptions: PaymentRecoveryOption[];
+  mode: 'mock';
+  label: 'Demo/Test Simulation';
+}
+
 export function scoreAddons(
   baseItems: CatalogItem[],
   availableAddons: CatalogItem[],
@@ -116,7 +144,6 @@ export function simulateConstraintTradeoffs(
   const baseCostPerUnit = baseItems.reduce((sum, item) => sum + item.price, 0);
   const baseTotal = baseCostPerUnit * intent.quantity;
 
-  // Calculate full request cost with all matching add-ons
   const matchedAddons = availableAddons.filter(a => 
     a.tags.some(t => intent.requestedTags.includes(t)) || hardConstraints.some(h => a.tags.includes(h))
   );
@@ -130,7 +157,7 @@ export function simulateConstraintTradeoffs(
   // Alternative 1: Budget-Strict (Preserve Hard Constraints, Relax Non-Essential Soft Delivery/Packaging Preferences)
   const budgetFittingAddons = matchedAddons
     .filter(a => !a.tags.includes('express_shipping') && !a.tags.includes('priority_shipping'))
-    .slice(0, 1); // e.g. Keep Note only
+    .slice(0, 1);
   
   const alt1AddonTotal = budgetFittingAddons.reduce((sum, a) => sum + a.price, 0) * intent.quantity;
   const alt1Total = baseTotal + alt1AddonTotal;
@@ -173,7 +200,7 @@ export function simulateConstraintTradeoffs(
     explanation: `Includes all requested add-ons (${matchedAddons.map(a => a.name).join(', ')}). Total ₹${fullTotal} exceeds original ₹${intent.budget} budget by ₹${fullTotal - intent.budget}, requiring buyer approval.`
   });
 
-  // Alternative 3: Quantity-Adjusted High-Spec Bundle (Preserve Budget & All Add-ons, Relax Quantity slightly)
+  // Alternative 3: Quantity-Adjusted High-Spec Bundle
   const costPerHamperWithAllAddons = baseCostPerUnit + fullAddonCostPerUnit;
   const optimizedQuantity = Math.floor(intent.budget / (costPerHamperWithAllAddons || 1));
   if (optimizedQuantity > 0 && optimizedQuantity < intent.quantity) {
@@ -203,6 +230,116 @@ export function simulateConstraintTradeoffs(
       ? `Full request with all soft add-ons totals ₹${fullTotal}, which exceeds the stated buyer budget limit of ₹${intent.budget}.`
       : undefined,
     alternatives,
+    mode: 'mock',
+    label: 'Demo/Test Simulation'
+  };
+}
+
+/**
+ * Adaptive Payment Recovery / Revenue Recovery Agent
+ * Deterministically generates recovery pathways when a checkout or bank gateway transaction fails.
+ * Never relaxes hard constraints. Preserves quote integrity while offering recovery routes.
+ */
+export function generatePaymentRecoveryOptions(
+  failedQuote: {
+    quoteId: string;
+    totalAmount: number;
+    baseItems: { id: string; name: string; unitPrice: number; quantity: number }[];
+    addonItems: { id: string; name: string; unitPrice: number; quantity: number }[];
+    productTags: string[];
+    hardConstraints?: string[];
+  },
+  failureReason: string = 'GATEWAY_CARD_NETWORK_TIMEOUT',
+  maxUnapprovedThreshold: number = 20000
+): PaymentRecoveryResult {
+  const hardConstraints = failedQuote.hardConstraints && failedQuote.hardConstraints.length > 0
+    ? failedQuote.hardConstraints
+    : failedQuote.productTags.filter(t => ['jain', 'vegan', 'halal', 'kosher'].includes(t));
+
+  const recoveryOptions: PaymentRecoveryOption[] = [];
+
+  // Option 1: Direct Idempotent Retry (Exact Same Quote & Amount via Alternate UPI Rail)
+  recoveryOptions.push({
+    optionId: 'rec_retry_exact',
+    title: 'Option 1: Instant UPI Mandate Retry (Preserve 100% Cart)',
+    recoveryStrategy: 'SAME_QUOTE_RETRY',
+    changedItems: [{
+      action: 'RETRY',
+      productId: failedQuote.quoteId,
+      productName: 'Full Quote Package',
+      originalPrice: failedQuote.totalAmount,
+    }],
+    preservedHardConstraints: hardConstraints.length > 0 ? hardConstraints : ['all_selected_specifications'],
+    relaxedConstraints: [],
+    finalTotal: failedQuote.totalAmount,
+    recoveredRevenue: failedQuote.totalAmount,
+    requiresApproval: failedQuote.totalAmount > maxUnapprovedThreshold,
+    explanation: 'Safely re-attempts transaction using Razorpay Instant UPI Intent rail with the original quote fingerprint, avoiding duplicate orders.'
+  });
+
+  // Option 2: Remove Lowest-Priority Optional Add-on (Prune Cart to guarantee immediate settlement)
+  if (failedQuote.addonItems && failedQuote.addonItems.length > 0) {
+    const sortedAddons = [...failedQuote.addonItems].sort((a, b) => a.unitPrice - b.unitPrice);
+    const lowestPriorityAddon = sortedAddons[0];
+    const prunedAddonTotal = failedQuote.addonItems
+      .filter(a => a.id !== lowestPriorityAddon.id)
+      .reduce((sum, a) => sum + (a.unitPrice * a.quantity), 0);
+    const baseTotal = failedQuote.baseItems.reduce((sum, b) => sum + (b.unitPrice * b.quantity), 0);
+    const prunedTotal = baseTotal + prunedAddonTotal;
+
+    recoveryOptions.push({
+      optionId: 'rec_prune_lowest_addon',
+      title: `Option 2: Value Optimized Recovery (Omit ${lowestPriorityAddon.name})`,
+      recoveryStrategy: 'REMOVE_LOWEST_PRIORITY_ADDON',
+      changedItems: [{
+        action: 'REMOVED',
+        productId: lowestPriorityAddon.id,
+        productName: lowestPriorityAddon.name,
+        originalPrice: lowestPriorityAddon.unitPrice * lowestPriorityAddon.quantity,
+      }],
+      preservedHardConstraints: hardConstraints.length > 0 ? hardConstraints : ['core_product_bundle'],
+      relaxedConstraints: [lowestPriorityAddon.name],
+      finalTotal: prunedTotal,
+      recoveredRevenue: prunedTotal,
+      requiresApproval: prunedTotal > maxUnapprovedThreshold,
+      explanation: `Preserves 100% of hard constraints while shedding non-essential ${lowestPriorityAddon.name} to lower transaction amount to ₹${prunedTotal}.`
+    });
+  }
+
+  // Option 3: Substitute with Standard Ground Courier SKU
+  const shippingAddon = failedQuote.addonItems.find(a => a.id.includes('shipping') || a.name.toLowerCase().includes('express'));
+  if (shippingAddon) {
+    const baseTotal = failedQuote.baseItems.reduce((sum, b) => sum + (b.unitPrice * b.quantity), 0);
+    const otherAddons = failedQuote.addonItems.filter(a => a.id !== shippingAddon.id);
+    const standardShippingUnitCost = 40; // ₹40 vs ₹120 express
+    const otherAddonTotal = otherAddons.reduce((sum, a) => sum + (a.unitPrice * a.quantity), 0);
+    const subTotal = baseTotal + otherAddonTotal + (standardShippingUnitCost * (shippingAddon.quantity || 1));
+
+    recoveryOptions.push({
+      optionId: 'rec_substitute_standard_shipping',
+      title: 'Option 3: Standard 2-Day Courier Route (Cost-Efficient)',
+      recoveryStrategy: 'DOWNGRADE_OPTIONAL_SKU',
+      changedItems: [{
+        action: 'SUBSTITUTED',
+        productId: shippingAddon.id,
+        productName: `${shippingAddon.name} -> Standard Surface Express`,
+        originalPrice: shippingAddon.unitPrice * shippingAddon.quantity,
+        newPrice: standardShippingUnitCost * shippingAddon.quantity,
+      }],
+      preservedHardConstraints: hardConstraints.length > 0 ? hardConstraints : ['all_items_intact'],
+      relaxedConstraints: ['friday_priority_air_delivery'],
+      finalTotal: subTotal,
+      recoveredRevenue: subTotal,
+      requiresApproval: subTotal > maxUnapprovedThreshold,
+      explanation: 'Switches priority air delivery to guaranteed surface courier, saving budget while protecting core hamper contents.'
+    });
+  }
+
+  return {
+    failedQuoteId: failedQuote.quoteId,
+    failureReason,
+    originalTotal: failedQuote.totalAmount,
+    recoveryOptions,
     mode: 'mock',
     label: 'Demo/Test Simulation'
   };

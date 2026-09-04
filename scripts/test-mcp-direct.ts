@@ -1,12 +1,13 @@
 /**
  * Growth Twin & RazorAgent Direct MCP JSON-RPC 2.0 Endpoint Verification Script
- * Validates discovery and execution for all 10 MCP tools, including:
- * 1. Constraint Trade-off Simulator (Safe Negotiation Mode)
- * 2. Revenue Bundle Engine & Add-on Scoring
- * 3. Merchant Policy Evaluation
- * 4. Machine-Readable Commerce Contract
- * 5. Server-side Approval Gating & Idempotency
- * 6. Inherited 6 MCP Commerce & Catalog Tools
+ * Validates discovery and execution for all 11 MCP tools, including:
+ * 1. Adaptive Payment Recovery / Revenue Recovery Agent (recover_failed_transaction)
+ * 2. Constraint Trade-off Simulator (Safe Negotiation Mode - simulate_constraint_tradeoffs)
+ * 3. Revenue Bundle Engine & Add-on Scoring (recommend_addons)
+ * 4. Merchant Policy Evaluation (evaluate_merchant_growth_policy)
+ * 5. Machine-Readable Commerce Contract (get_commerce_contract)
+ * 6. Server-side Approval Gating & Idempotency
+ * 7. Inherited 6 MCP Commerce & Catalog Tools
  */
 
 import { globalMCPEngine } from '../lib/razoragent/mcp-engine';
@@ -15,14 +16,105 @@ import { globalAuditLogger } from '../lib/audit-logger';
 async function verifyMCPDirect() {
   console.log('⚡ Verifying Model Context Protocol (MCP) JSON-RPC 2.0 Tools with Growth Twin Layer...\n');
 
-  // Test 1: tools/list discovery (All 10 tools)
+  // Test 1: tools/list discovery (All 11 tools)
   const tools = globalMCPEngine.listTools();
   console.log(`[MCP DISCOVERY] Registered Tools: ${tools.length} Tools`);
   tools.forEach((t, i) => console.log(`  ${i + 1}. ${t.name}: ${t.description.substring(0, 75)}...`));
-  console.assert(tools.length === 10, `Expected 10 registered tools, found ${tools.length}`);
-  console.log('✔ MCP Discovery passed (10/10 Tools registered)\n');
+  console.assert(tools.length === 11, `Expected 11 registered tools, found ${tools.length}`);
+  console.log('✔ MCP Discovery passed (11/11 Tools registered)\n');
 
-  // Test 2: Growth Twin 10th Tool: simulate_constraint_tradeoffs (Safe Negotiation Mode)
+  // Test 2: Growth Twin 11th Tool: recover_failed_transaction (Adaptive Payment Recovery)
+  console.log('🧪 Testing Growth Twin 11th MCP Tool: recover_failed_transaction (Adaptive Payment Recovery)');
+  
+  // Step A: Create a multi-item cart quote with add-ons to simulate transaction failure
+  const initialQuote = await globalMCPEngine.executeTool('calculate_cart_quote', {
+    items: [
+      { product_id: 'hamp_jain_01', quantity: 25 },
+      { product_id: 'addon_shipping_02', quantity: 25 },
+      { product_id: 'addon_note_01', quantity: 25 },
+    ],
+  });
+
+  console.log(`   Initial Cart Quote Created: ${initialQuote.cartId} (Total: ₹${initialQuote.totalAmount})`);
+
+  // Step B: Trigger payment recovery on simulated gateway failure
+  const recoveryResult = await globalMCPEngine.executeTool('recover_failed_transaction', {
+    cart_id: initialQuote.cartId,
+    failure_reason: 'GATEWAY_CARD_NETWORK_TIMEOUT',
+  });
+
+  console.log(`   Failed Quote ID Preserved: ${recoveryResult.failedQuoteId}`);
+  console.log(`   Failure Reason: ${recoveryResult.failureReason}`);
+  console.log(`   Generated ${recoveryResult.recoveryOptions.length} Deterministic Recovery Pathways:`);
+
+  // Assertions: 2-3 deterministic options returned
+  console.assert(
+    recoveryResult.recoveryOptions.length >= 2 && recoveryResult.recoveryOptions.length <= 3,
+    `Expected 2 or 3 recovery options, found ${recoveryResult.recoveryOptions.length}`
+  );
+
+  recoveryResult.recoveryOptions.forEach((opt: any) => {
+    console.log(`     - [${opt.optionId}] ${opt.title}`);
+    console.log(`       Strategy: ${opt.recoveryStrategy}`);
+    console.log(`       Preserved Hard Constraints: ${opt.preservedHardConstraints.join(', ')}`);
+    console.log(`       Final Total: ₹${opt.finalTotal}, Recovered Revenue: ₹${opt.recoveredRevenue}`);
+    console.log(`       Requires Approval: ${opt.requiresApproval}`);
+    console.log(`       Explanation: ${opt.explanation}\n`);
+
+    // Assertion: Hard constraints are NEVER relaxed in any recovery option
+    console.assert(
+      opt.preservedHardConstraints.includes('jain'),
+      `Hard constraint 'jain' MUST be preserved in recovery option ${opt.optionId}`
+    );
+    console.assert(
+      !opt.relaxedConstraints.includes('jain'),
+      `Hard constraint 'jain' MUST NEVER be relaxed in recovery option ${opt.optionId}`
+    );
+    console.assert(opt.recoveredRevenue > 0, `Option ${opt.optionId} must have positive recovered revenue`);
+    console.assert(typeof opt.requiresApproval === 'boolean', `Option ${opt.optionId} must have explicit approval boolean`);
+    console.assert(Array.isArray(opt.changedItems), `Option ${opt.optionId} must document changed items`);
+  });
+
+  // Step C: Materialize a selected recovery pathway (Option 2: Value Optimized / Prune Lowest Addon)
+  console.log('   Materializing Recovery Selection (rec_prune_lowest_addon)...');
+  const recoveryExecution = await globalMCPEngine.executeTool('recover_failed_transaction', {
+    cart_id: initialQuote.cartId,
+    failure_reason: 'GATEWAY_CARD_NETWORK_TIMEOUT',
+    select_option_id: 'rec_prune_lowest_addon',
+  });
+
+  console.assert(recoveryExecution.selectedQuote, 'Must return a materialized selectedQuote object');
+  console.log(`   Recovered Quote ID: ${recoveryExecution.selectedQuote.quoteId} (Version: ${recoveryExecution.selectedQuote.version})`);
+  console.log(`   Status: ${recoveryExecution.selectedQuote.status}`);
+  console.log(`   Idempotency Key: ${recoveryExecution.selectedQuote.idempotencyKey}`);
+  console.log(`   Policy Checks Compliant: ${recoveryExecution.selectedQuote.policyCheck.isCompliant}`);
+
+  // Assertions on selected quote version & approval gating
+  console.assert(
+    recoveryExecution.selectedQuote.status === 'AWAITING_APPROVAL',
+    'Newly minted recovery quote must require explicit approval gating'
+  );
+  console.assert(
+    recoveryExecution.selectedQuote.preservedHardConstraints.includes('jain'),
+    'Selected quote must preserve hard constraint jain'
+  );
+  console.assert(
+    recoveryExecution.selectedQuote.idempotencyKey.includes(recoveryExecution.selectedQuote.quoteId),
+    'Idempotency key must be derived from quote ID + version to prevent duplicate orders'
+  );
+
+  // Step D: Verify Audit Trail records all 3 recovery lifecycle events
+  const allEvents = globalAuditLogger.getEvents();
+  const failureDetected = allEvents.find(e => e.type === 'PAYMENT_FAILURE_DETECTED');
+  const optionsGenerated = allEvents.find(e => e.type === 'RECOVERY_OPTIONS_GENERATED');
+  const optionSelected = allEvents.find(e => e.type === 'RECOVERY_OPTION_SELECTED');
+
+  console.assert(!!failureDetected, 'Audit ledger must record PAYMENT_FAILURE_DETECTED');
+  console.assert(!!optionsGenerated, 'Audit ledger must record RECOVERY_OPTIONS_GENERATED');
+  console.assert(!!optionSelected, 'Audit ledger must record RECOVERY_OPTION_SELECTED');
+  console.log('✔ recover_failed_transaction verified with 100% precision\n');
+
+  // Test 3: Growth Twin 10th Tool: simulate_constraint_tradeoffs (Safe Negotiation Mode)
   console.log('🧪 Testing Growth Twin 10th MCP Tool: simulate_constraint_tradeoffs');
   const tradeoffResult = await globalMCPEngine.executeTool('simulate_constraint_tradeoffs', {
     base_product_ids: ['hamp_jain_01'],
@@ -88,7 +180,7 @@ async function verifyMCPDirect() {
   console.assert(!!selectionEvent, 'Audit ledger must record TRADEOFF_ALTERNATIVE_SELECTED');
   console.log('✔ simulate_constraint_tradeoffs verified with 100% precision\n');
 
-  // Test 3: Growth Twin recommend_addons
+  // Test 4: Growth Twin recommend_addons
   console.log('🧪 Testing Growth Twin MCP Tool: recommend_addons');
   const addonRecs = await globalMCPEngine.executeTool('recommend_addons', {
     base_product_ids: ['hamp_jain_01'],
@@ -108,7 +200,7 @@ async function verifyMCPDirect() {
   console.assert(addonRecs.label === 'Demo/Test Simulation', 'Must label Demo/Test Simulation');
   console.log('✔ recommend_addons verified\n');
 
-  // Test 4: Growth Twin evaluate_merchant_growth_policy
+  // Test 5: Growth Twin evaluate_merchant_growth_policy
   console.log('🧪 Testing Growth Twin MCP Tool: evaluate_merchant_growth_policy');
   const policyCheckUnapproved = await globalMCPEngine.executeTool('evaluate_merchant_growth_policy', {
     base_value: 25000,
@@ -134,7 +226,7 @@ async function verifyMCPDirect() {
   console.assert(policyCheckApproved.nextPermittedAction === 'PROCEED_TO_PAYMENT_CREATION');
   console.log('✔ evaluate_merchant_growth_policy verified\n');
 
-  // Test 5: Growth Twin get_commerce_contract
+  // Test 6: Growth Twin get_commerce_contract
   console.log('🧪 Testing Growth Twin MCP Tool: get_commerce_contract');
   const contract = await globalMCPEngine.executeTool('get_commerce_contract', {});
   console.log(`   Merchant: ${contract.merchant.name}`);
@@ -143,7 +235,7 @@ async function verifyMCPDirect() {
   console.assert(contract.paymentStates.includes('AWAITING_APPROVAL'), 'Payment states must include AWAITING_APPROVAL');
   console.log('✔ get_commerce_contract verified\n');
 
-  // Test 6: Server-side Approval Gating on create_guarded_order (Bypassing frontend)
+  // Test 7: Server-side Approval Gating on create_guarded_order (Bypassing frontend)
   console.log('🛡️  Testing Server-Side Approval Gating on create_guarded_order:');
   
   // Create an unapproved quote for 25 units (> ₹20,000 threshold or requiring approval)
@@ -185,7 +277,7 @@ async function verifyMCPDirect() {
   console.assert(approvedOrderAttempt.label === 'Demo/Test Simulation', 'Must label Demo/Test Simulation');
   console.log('✔ Server-Side Approval Gating verified with 100% precision\n');
 
-  // Test 7: Inherited 6 tools verification
+  // Test 8: Inherited 6 tools verification
   console.log('🧪 Verifying Inherited Product Search & Details MCP Tools:');
   const searchRes = await globalMCPEngine.executeTool('search_products', { query: 'wireless keyboard' });
   console.log(`   search_products: Found ${searchRes.count} products`);
@@ -204,7 +296,7 @@ async function verifyMCPDirect() {
   console.assert(hmacCheck.verified === false, 'Tampered signature must fail');
   console.log('✔ All Inherited MCP Tools verified without regressions\n');
 
-  console.log('🎉 Complete 10-Tool MCP Verification Passed with 100% Assertion Rate!\n');
+  console.log('🎉 Complete 11-Tool MCP Verification Passed with 100% Assertion Rate!\n');
 }
 
 verifyMCPDirect().catch((err) => {

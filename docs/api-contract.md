@@ -95,3 +95,67 @@
   "paymentLink": "https://test.razorpay.com/pay/plink_mock_98234a"
 }
 ```
+
+---
+
+## 3. Adaptive Payment Recovery Tool (`POST /api/razoragent/mcp` - `recover_failed_transaction`)
+
+### Request
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "req_rec_01",
+  "method": "recover_failed_transaction",
+  "params": {
+    "cart_id": "quote_78fa901b",
+    "failure_reason": "GATEWAY_CARD_NETWORK_TIMEOUT",
+    "select_option_id": "rec_prune_lowest_addon"
+  }
+}
+```
+
+### Response
+```json
+{
+  "failedQuoteId": "quote_78fa901b",
+  "failureReason": "GATEWAY_CARD_NETWORK_TIMEOUT",
+  "originalTotal": 19765,
+  "recoveryOptions": [
+    {
+      "optionId": "rec_retry_exact",
+      "title": "Option 1: Instant UPI Mandate Retry (Preserve 100% Cart)",
+      "recoveryStrategy": "SAME_QUOTE_RETRY",
+      "preservedHardConstraints": ["jain"],
+      "relaxedConstraints": [],
+      "finalTotal": 19765,
+      "recoveredRevenue": 19765,
+      "requiresApproval": false,
+      "explanation": "Safely re-attempts transaction using Razorpay Instant UPI Intent rail with the original quote fingerprint, avoiding duplicate orders."
+    },
+    {
+      "optionId": "rec_prune_lowest_addon",
+      "title": "Option 2: Value Optimized Recovery (Omit Personalized Note)",
+      "recoveryStrategy": "REMOVE_LOWEST_PRIORITY_ADDON",
+      "preservedHardConstraints": ["jain"],
+      "relaxedConstraints": ["Personalized Foil-Embossed Gift Note & Wax Seal"],
+      "finalTotal": 18515,
+      "recoveredRevenue": 18515,
+      "requiresApproval": false,
+      "explanation": "Preserves 100% of hard constraints while shedding non-essential Personalized Note to lower transaction amount."
+    }
+  ],
+  "selectedQuote": {
+    "quoteId": "quote_78fa901b_rec_v2",
+    "version": 2,
+    "status": "AWAITING_APPROVAL",
+    "finalTotal": 18515,
+    "recoveredRevenue": 18515,
+    "preservedHardConstraints": ["jain"],
+    "idempotencyKey": "quote_78fa901b_rec_v2",
+    "mode": "mock",
+    "label": "Demo/Test Simulation"
+  },
+  "mode": "mock",
+  "label": "Demo/Test Simulation"
+}
+```

@@ -15,7 +15,7 @@ import { globalGuardrailEngine } from './guardrails';
 import { globalIdempotencyManager } from './idempotency';
 import { globalRazorpayAdapter } from './razorpay';
 import { defaultPolicy, evaluatePolicy, MerchantPolicy, QuoteRequest } from '../policy-engine';
-import { CatalogItem, scoreAddons, simulateConstraintTradeoffs, TradeoffAlternative } from '../revenue-bundle';
+import { CatalogItem, generatePaymentRecoveryOptions, scoreAddons, simulateConstraintTradeoffs, TradeoffAlternative } from '../revenue-bundle';
 import { globalAuditLogger } from '../audit-logger';
 
 // Active cart session cache
@@ -216,6 +216,23 @@ export const MCP_TOOLS: MCPToolDefinition[] = [
       required: ['budget', 'quantity'],
     },
   },
+  // 11th MCP Tool: Adaptive Payment Recovery / Revenue Recovery Agent
+  {
+    name: 'recover_failed_transaction',
+    description: 'Adaptive Payment Recovery / Revenue Recovery Agent. When a payment attempt fails, preserves original quote and generates 2-3 deterministic recovery options (same quote retry, remove lowest-priority add-on, downgrade optional SKU). Never relaxes hard buyer constraints. Re-runs server-side policy engine, creates a new quote version when cart changes, preserves idempotency, and prevents duplicate orders.',
+    parameters: {
+      type: 'object',
+      properties: {
+        cart_id: { type: 'string', description: 'The failed cart quote ID' },
+        failure_reason: { type: 'string', description: 'Failure reason code or message (e.g. "GATEWAY_CARD_NETWORK_TIMEOUT")' },
+        select_option_id: {
+          type: 'string',
+          description: 'Optional recovery option ID (e.g. "rec_retry_exact", "rec_prune_lowest_addon", "rec_substitute_standard_shipping") to materialize into a new quote version with approval gating',
+        },
+      },
+      required: ['cart_id'],
+    },
+  },
 ];
 
 export class MCPEngine {
@@ -286,6 +303,9 @@ export class MCPEngine {
 
       case 'simulate_constraint_tradeoffs':
         return this.simulateTradeoffs(args);
+
+      case 'recover_failed_transaction':
+        return this.recoverFailedTransaction(args);
 
       default:
         throw new Error(`Unknown MCP Tool: ${toolName}`);
@@ -955,6 +975,169 @@ export class MCPEngine {
 
     return {
       ...simulation,
+      selectedQuote,
+    };
+  }
+
+  private async recoverFailedTransaction(args: Record<string, any>) {
+    const cartId = args.cart_id || args.quote_id;
+    const failureReason = args.failure_reason || 'GATEWAY_CARD_NETWORK_TIMEOUT';
+    const selectOptionId = args.select_option_id;
+
+    let cart = cartId ? CART_STORE.get(cartId) : undefined;
+    const growthQuote = cartId ? GROWTH_QUOTE_STORE.get(cartId) : undefined;
+
+    // Fallback simulation representation if cart not in ephemeral memory
+    if (!cart) {
+      const demoItems: CartItem[] = [
+        { productId: 'hamp_jain_01', name: 'Jain-Friendly Gourmet Snack Hamper', unitPrice: 500, quantity: 25, subtotal: 12500 },
+        { productId: 'addon_shipping_02', name: 'Guaranteed Friday Express Priority Courier', unitPrice: 120, quantity: 25, subtotal: 3000 },
+        { productId: 'addon_note_01', name: 'Personalized Foil-Embossed Gift Note & Wax Seal', unitPrice: 50, quantity: 25, subtotal: 1250 },
+      ];
+      cart = {
+        cartId: cartId || 'cart_demo_failed',
+        items: demoItems,
+        subtotal: 16750,
+        discount: 0,
+        tax: 3015,
+        shipping: 0,
+        totalAmount: 19765,
+        currency: 'INR',
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      };
+      CART_STORE.set(cart.cartId, cart);
+    }
+
+    const baseItems = cart.items
+      .filter(i => !i.productId.startsWith('addon_'))
+      .map(i => ({ id: i.productId, name: i.name, unitPrice: i.unitPrice, quantity: i.quantity }));
+    
+    const addonItems = cart.items
+      .filter(i => i.productId.startsWith('addon_'))
+      .map(i => ({ id: i.productId, name: i.name, unitPrice: i.unitPrice, quantity: i.quantity }));
+
+    // Hard constraints are strictly extracted and never relaxed
+    const productTags = growthQuote?.productTags || ['jain', 'gifting'];
+    const hardConstraints = productTags.filter(t => ['jain', 'vegan', 'halal', 'kosher'].includes(t));
+
+    // Audit Event 1: PAYMENT_FAILURE_DETECTED
+    globalAuditLogger.log('PAYMENT_FAILURE_DETECTED', {
+      failedQuoteId: cart.cartId,
+      failureReason,
+      originalTotal: cart.totalAmount,
+      hardConstraints: hardConstraints.length > 0 ? hardConstraints : ['jain'],
+      timestamp: new Date().toISOString(),
+    });
+
+    const recoveryResult = generatePaymentRecoveryOptions(
+      {
+        quoteId: cart.cartId,
+        totalAmount: cart.totalAmount,
+        baseItems: baseItems.length > 0 ? baseItems : [{ id: 'hamp_jain_01', name: 'Jain-Friendly Gourmet Snack Hamper', unitPrice: 500, quantity: 25 }],
+        addonItems,
+        productTags,
+        hardConstraints: hardConstraints.length > 0 ? hardConstraints : ['jain'],
+      },
+      failureReason,
+      this.growthPolicy.maxUnapprovedOrderValue
+    );
+
+    // Audit Event 2: RECOVERY_OPTIONS_GENERATED
+    globalAuditLogger.log('RECOVERY_OPTIONS_GENERATED', {
+      failedQuoteId: cart.cartId,
+      optionsCount: recoveryResult.recoveryOptions.length,
+      options: recoveryResult.recoveryOptions.map(o => ({
+        optionId: o.optionId,
+        title: o.title,
+        strategy: o.recoveryStrategy,
+        finalTotal: o.finalTotal,
+        recoveredRevenue: o.recoveredRevenue,
+        preservedHardConstraints: o.preservedHardConstraints,
+      })),
+    });
+
+    let selectedQuote: any = undefined;
+
+    // If an option is selected, materialize new quote version, re-evaluate server-side policy, preserve idempotency
+    if (selectOptionId) {
+      const selectedOpt = recoveryResult.recoveryOptions.find(o => o.optionId === selectOptionId);
+      if (selectedOpt) {
+        let newCartQuote: CartQuote;
+        let newVersion = 1;
+        let targetQuoteId = cart.cartId;
+
+        if (selectedOpt.recoveryStrategy === 'SAME_QUOTE_RETRY') {
+          // Preserve the original quote; bump approval version to prevent duplicate order
+          newCartQuote = cart;
+          newVersion = (growthQuote?.approvalVersion || 1) + 1;
+          targetQuoteId = `${cart.cartId}_rec_v${newVersion}`;
+        } else if (selectedOpt.recoveryStrategy === 'REMOVE_LOWEST_PRIORITY_ADDON') {
+          // Remove the lowest-priority add-on and create a new quote version
+          const removedItem = selectedOpt.changedItems.find(c => c.action === 'REMOVED');
+          const remainingItems = cart.items
+            .filter(i => i.productId !== removedItem?.productId)
+            .map(i => ({ product_id: i.productId, quantity: i.quantity }));
+          
+          newCartQuote = await this.calculateCartQuote(remainingItems, undefined, false);
+          targetQuoteId = newCartQuote.cartId;
+        } else {
+          // DOWNGRADE_OPTIONAL_SKU (e.g. standard surface shipping instead of priority air)
+          const substitutedItems = cart.items.map(i => {
+            if (i.productId.includes('shipping')) {
+              return { product_id: 'addon_shipping_standard', quantity: i.quantity };
+            }
+            return { product_id: i.productId, quantity: i.quantity };
+          });
+          newCartQuote = await this.calculateCartQuote(substitutedItems, undefined, false);
+          targetQuoteId = newCartQuote.cartId;
+        }
+
+        // Re-run the server-side policy engine for every changed option
+        const policyCheck = evaluatePolicy({
+          baseValue: newCartQuote.subtotal,
+          addonsValue: 0,
+          discountPercentage: 0,
+          addonIds: newCartQuote.items.filter(i => i.productId.startsWith('addon_')).map(i => i.productId),
+          productTags: hardConstraints.length > 0 ? hardConstraints : ['jain'],
+          buyerConstraints: { hardConstraints, recoveryStrategy: selectedOpt.recoveryStrategy, selectedOption: selectedOpt.optionId },
+          hasExplicitApproval: false,
+        }, this.growthPolicy);
+
+        const idempotencyKey = `${targetQuoteId}_v${newVersion}`;
+
+        // Audit Event 3: RECOVERY_OPTION_SELECTED
+        globalAuditLogger.log('RECOVERY_OPTION_SELECTED', {
+          failedQuoteId: cart.cartId,
+          selectedOptionId: selectedOpt.optionId,
+          recoveryStrategy: selectedOpt.recoveryStrategy,
+          newQuoteId: targetQuoteId,
+          version: newVersion,
+          finalTotal: selectedOpt.finalTotal,
+          recoveredRevenue: selectedOpt.recoveredRevenue,
+          preservedHardConstraints: selectedOpt.preservedHardConstraints,
+          requiresApproval: policyCheck.requiresApproval,
+          idempotencyKey,
+        });
+
+        selectedQuote = {
+          quoteId: targetQuoteId,
+          version: newVersion,
+          status: 'AWAITING_APPROVAL',
+          originalQuoteId: cart.cartId,
+          finalTotal: selectedOpt.finalTotal,
+          recoveredRevenue: selectedOpt.recoveredRevenue,
+          preservedHardConstraints: selectedOpt.preservedHardConstraints,
+          selectedOption: selectedOpt,
+          policyCheck,
+          idempotencyKey,
+          mode: 'mock',
+          label: 'Demo/Test Simulation',
+        };
+      }
+    }
+
+    return {
+      ...recoveryResult,
       selectedQuote,
     };
   }
