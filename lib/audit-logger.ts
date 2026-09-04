@@ -6,7 +6,9 @@ export type AuditEventType =
   | 'PAYMENT_ATTEMPT'
   | 'PAYMENT_SUCCESS'
   | 'PAYMENT_FAILED'
-  | 'RETRY_ATTEMPT';
+  | 'RETRY_ATTEMPT'
+  | 'CONSTRAINT_CONFLICT_DETECTED'
+  | 'TRADEOFF_ALTERNATIVE_SELECTED';
 
 export interface AuditEvent {
   id: string;

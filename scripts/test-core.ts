@@ -1,5 +1,5 @@
 import { evaluatePolicy, defaultPolicy, QuoteRequest } from '../lib/policy-engine';
-import { scoreAddons, CatalogItem, BuyerIntent } from '../lib/revenue-bundle';
+import { scoreAddons, simulateConstraintTradeoffs, CatalogItem, BuyerIntent } from '../lib/revenue-bundle';
 import { MockRazorpayAdapter } from '../lib/razorpay-adapter';
 
 async function runTests() {
@@ -34,18 +34,38 @@ async function runTests() {
   
   // 2. Revenue Bundle Tests
   console.log("Testing Revenue Bundle: Scoring Model");
-  const baseItems: CatalogItem[] = [{ id: 'b1', name: 'Hamper', price: 500, tags: ['gifting'], type: 'base', inventoryConfidence: 1, merchantPriority: 1 }];
+  const baseItems: CatalogItem[] = [{ id: 'b1', name: 'Hamper', price: 500, tags: ['gifting', 'jain'], type: 'base', inventoryConfidence: 1, merchantPriority: 1 }];
   const addons: CatalogItem[] = [
     { id: 'a1', name: 'Jain Sweets', price: 100, tags: ['jain'], type: 'addon', inventoryConfidence: 0.9, merchantPriority: 0.8 },
-    { id: 'a2', name: 'Premium Note', price: 50, tags: ['note'], type: 'addon', inventoryConfidence: 1, merchantPriority: 1 }
+    { id: 'a2', name: 'Premium Note', price: 50, tags: ['note', 'custom_note'], type: 'addon', inventoryConfidence: 1, merchantPriority: 1 },
+    { id: 'a3', name: 'Friday Priority Shipping', price: 120, tags: ['friday_delivery', 'priority_shipping'], type: 'addon', inventoryConfidence: 1, merchantPriority: 0.9 }
   ];
   const intent: BuyerIntent = { budget: 18000, requestedTags: ['jain', 'note'], quantity: 25 };
   
   const scored = scoreAddons(baseItems, addons, intent);
-  console.assert(scored.length === 2, "Should score all addons");
+  console.assert(scored.length === 3, "Should score all addons");
   console.assert(scored[0].score > 0, "Top addon should have a positive score");
 
-  // 3. Razorpay Mock Adapter Tests (Idempotency and Failure Recovery)
+  // 3. Constraint Trade-off Simulator Tests (Safe Negotiation Mode)
+  console.log("Testing Constraint Trade-off Simulator (Safe Negotiation Mode)...");
+  const conflictIntent: BuyerIntent = {
+    budget: 14000, // Too small for 25 * (500 + 100 + 50 + 120 = 770) = 19,250
+    quantity: 25,
+    requestedTags: ['jain', 'note', 'friday_delivery'],
+    hardConstraints: ['jain'],
+    softPreferences: ['note', 'friday_delivery']
+  };
+
+  const tradeoffResult = simulateConstraintTradeoffs(baseItems, addons, conflictIntent, 20000);
+  console.assert(tradeoffResult.hasConflict === true, "Must identify genuine constraint conflict");
+  console.assert(tradeoffResult.alternatives.length >= 2, "Must return at least 2 structured alternatives");
+
+  tradeoffResult.alternatives.forEach(alt => {
+    console.assert(!alt.relaxedConstraints.includes('jain'), "Hard constraint 'jain' must NEVER be relaxed");
+    console.assert(alt.preservedConstraints.includes('jain'), "Hard constraint 'jain' must be preserved");
+  });
+
+  // 4. Razorpay Mock Adapter Tests (Idempotency and Failure Recovery)
   console.log("Testing Razorpay Adapter: Failure Recovery");
   const adapter = new MockRazorpayAdapter();
   const order = await adapter.createOrder({ amount: 1800000, currency: "INR", receipt: "rcpt_1" });

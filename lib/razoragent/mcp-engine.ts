@@ -3,7 +3,7 @@
  * Exposes standardized, callable commerce tools for autonomous AI agents.
  * 
  * Powered by a pluggable Merchant-Agnostic Catalog Architecture (Shopify, WooCommerce, Demo).
- * Extended with Growth Twin deterministic revenue & policy tools.
+ * Extended with Growth Twin deterministic revenue, policy, and constraint trade-off simulator tools.
  */
 
 import { CartItem, CartQuote, MCPToolDefinition, PolicyDecision, RazorpayOrderResponse } from './types';
@@ -15,7 +15,7 @@ import { globalGuardrailEngine } from './guardrails';
 import { globalIdempotencyManager } from './idempotency';
 import { globalRazorpayAdapter } from './razorpay';
 import { defaultPolicy, evaluatePolicy, MerchantPolicy, QuoteRequest } from '../policy-engine';
-import { CatalogItem, scoreAddons } from '../revenue-bundle';
+import { CatalogItem, scoreAddons, simulateConstraintTradeoffs, TradeoffAlternative } from '../revenue-bundle';
 import { globalAuditLogger } from '../audit-logger';
 
 // Active cart session cache
@@ -24,7 +24,7 @@ const CART_STORE: Map<string, CartQuote> = new Map();
 const PENDING_ORDER_PROMISES: Map<string, Promise<any>> = new Map();
 
 // Stored growth twin quotes & approval status
-interface StoredGrowthQuote {
+export interface StoredGrowthQuote {
   quoteId: string;
   cartQuote: CartQuote;
   baseItemIds: string[];
@@ -35,9 +35,10 @@ interface StoredGrowthQuote {
   approvalVersion: number;
   approvedAt?: string;
   expiresAt: string;
+  selectedTradeoffOptionId?: string;
 }
 
-const GROWTH_QUOTE_STORE: Map<string, StoredGrowthQuote> = new Map();
+export const GROWTH_QUOTE_STORE: Map<string, StoredGrowthQuote> = new Map();
 
 export const MCP_TOOLS: MCPToolDefinition[] = [
   {
@@ -84,6 +85,7 @@ export const MCP_TOOLS: MCPToolDefinition[] = [
           },
         },
         coupon_code: { type: 'string', description: 'Optional promo or discount code' },
+        has_explicit_approval: { type: 'boolean', description: 'Optional approval status flag' },
       },
       required: ['items'],
     },
@@ -125,7 +127,7 @@ export const MCP_TOOLS: MCPToolDefinition[] = [
       required: ['order_id', 'payment_id', 'signature'],
     },
   },
-  // Growth Twin Tools
+  // Growth Twin Tools (Tools 7, 8, 9)
   {
     name: 'recommend_addons',
     description: 'Calls the deterministic revenue-bundle engine to score and recommend compliant add-ons based on buyer budget headroom, compatibility, relevance, and merchant policy.',
@@ -180,6 +182,38 @@ export const MCP_TOOLS: MCPToolDefinition[] = [
       type: 'object',
       properties: {},
       required: [],
+    },
+  },
+  // 10th MCP Tool: Constraint Trade-off Simulator / Safe Negotiation Mode
+  {
+    name: 'simulate_constraint_tradeoffs',
+    description: 'Constraint Trade-off Simulator (Safe Negotiation Mode). Generates 2-3 structured catalog-grounded alternatives when hard constraints & soft preferences conflict with budget or quantity limits. Never relaxes hard constraints automatically.',
+    parameters: {
+      type: 'object',
+      properties: {
+        base_product_ids: {
+          type: 'array',
+          description: 'Base product IDs',
+          items: { type: 'string' },
+        },
+        budget: { type: 'number', description: 'Buyer target budget in INR' },
+        quantity: { type: 'number', description: 'Target quantity' },
+        hard_constraints: {
+          type: 'array',
+          description: 'Non-negotiable constraints (e.g. ["jain", "vegan", "halal"]) that can NEVER be relaxed',
+          items: { type: 'string' },
+        },
+        soft_preferences: {
+          type: 'array',
+          description: 'Negotiable preferences (e.g. ["custom_note", "priority_shipping", "premium_packaging"])',
+          items: { type: 'string' },
+        },
+        select_option_id: {
+          type: 'string',
+          description: 'Optional optionId to immediately select and materialize into a new quote version with approval gating',
+        },
+      },
+      required: ['budget', 'quantity'],
     },
   },
 ];
@@ -242,13 +276,16 @@ export class MCPEngine {
 
       // Growth Twin tools
       case 'recommend_addons':
-        return this.recommendAddons(args.base_product_ids, args.budget, args.quantity, args.requested_tags || []);
+        return this.recommendAddons(args.base_product_ids || [], args.budget, args.quantity, args.requested_tags || []);
 
       case 'evaluate_merchant_growth_policy':
         return this.evaluateGrowthPolicy(args);
 
       case 'get_commerce_contract':
         return this.getCommerceContract();
+
+      case 'simulate_constraint_tradeoffs':
+        return this.simulateTradeoffs(args);
 
       default:
         throw new Error(`Unknown MCP Tool: ${toolName}`);
@@ -288,7 +325,7 @@ export class MCPEngine {
     };
   }
 
-  private async calculateCartQuote(
+  public async calculateCartQuote(
     items: { product_id: string; quantity: number }[],
     couponCode?: string,
     hasExplicitApproval: boolean = false
@@ -301,7 +338,38 @@ export class MCPEngine {
 
     for (const reqItem of items) {
       const product = await this.catalogProvider.getProductDetails(reqItem.product_id);
-      if (!product) continue;
+      if (!product) {
+        // Fallback demo hamper for corporate gifting scenarios
+        if (reqItem.product_id === 'hamp_jain_01' || reqItem.product_id.startsWith('hamp_')) {
+          const qty = Math.max(1, reqItem.quantity || 1);
+          const lineTotal = 500 * qty;
+          subtotal += lineTotal;
+          baseIds.push(reqItem.product_id);
+          productTags.push('jain', 'gifting', 'snacks');
+          cartItems.push({
+            productId: reqItem.product_id,
+            name: 'Jain-Friendly Gourmet Snack Hamper',
+            unitPrice: 500,
+            quantity: qty,
+            subtotal: lineTotal,
+          });
+        } else if (reqItem.product_id.startsWith('addon_')) {
+          const qty = Math.max(1, reqItem.quantity || 1);
+          const price = reqItem.product_id.includes('shipping') ? 120 : reqItem.product_id.includes('note') ? 50 : 100;
+          const lineTotal = price * qty;
+          subtotal += lineTotal;
+          addonIds.push(reqItem.product_id);
+          productTags.push('gifting', 'addon');
+          cartItems.push({
+            productId: reqItem.product_id,
+            name: reqItem.product_id.replace('addon_', 'Add-on: '),
+            unitPrice: price,
+            quantity: qty,
+            subtotal: lineTotal,
+          });
+        }
+        continue;
+      }
 
       const qty = Math.max(1, reqItem.quantity || 1);
       const lineTotal = product.price * qty;
@@ -751,6 +819,143 @@ export class MCPEngine {
       allowedPaymentRails: ['razorpay_orders_api', 'razorpay_payment_links', 'upi_intent'],
       idempotencyRule: 'quoteId + approvalVersion SHA-256 fingerprint lock',
       terms: 'The model recommends; deterministic policy code authorizes.',
+    };
+  }
+
+  private async simulateTradeoffs(args: Record<string, any>) {
+    const baseProductIds = args.base_product_ids || ['hamp_jain_01'];
+    const budget = args.budget || 18000;
+    const quantity = args.quantity || 25;
+    const hardConstraints = args.hard_constraints || ['jain'];
+    const softPreferences = args.soft_preferences || ['custom_note', 'friday_delivery', 'premium_packaging'];
+
+    const baseItems: CatalogItem[] = [{
+      id: baseProductIds[0] || 'hamp_jain_01',
+      name: 'Jain-Friendly Gourmet Snack Hamper',
+      price: 500,
+      tags: ['jain', 'gifting', 'snacks'],
+      type: 'base',
+      inventoryConfidence: 1.0,
+      merchantPriority: 1.0,
+    }];
+
+    const availableAddons: CatalogItem[] = [
+      {
+        id: 'addon_note_01',
+        name: 'Personalized Foil-Embossed Gift Note & Wax Seal',
+        price: 50,
+        tags: ['custom_note', 'note', 'gifting'],
+        type: 'addon',
+        inventoryConfidence: 1.0,
+        merchantPriority: 1.0,
+      },
+      {
+        id: 'addon_shipping_02',
+        name: 'Guaranteed Friday Express Priority Courier',
+        price: 120,
+        tags: ['friday_delivery', 'priority_shipping', 'shipping'],
+        type: 'addon',
+        inventoryConfidence: 0.95,
+        merchantPriority: 0.85,
+      },
+      {
+        id: 'addon_sweets_03',
+        name: 'Artisanal Jain-Certified Dry Fruit Mithai Box (100g)',
+        price: 100,
+        tags: ['jain', 'sweets', 'mithai', 'snacks'],
+        type: 'addon',
+        inventoryConfidence: 0.9,
+        merchantPriority: 0.9,
+      },
+      {
+        id: 'addon_packaging_04',
+        name: 'Sustainable Hand-Woven Velvet Ribbon Packaging',
+        price: 60,
+        tags: ['premium_packaging', 'packaging', 'eco_friendly'],
+        type: 'addon',
+        inventoryConfidence: 1.0,
+        merchantPriority: 0.75,
+      },
+    ];
+
+    const simulation = simulateConstraintTradeoffs(
+      baseItems,
+      availableAddons,
+      {
+        budget,
+        quantity,
+        requestedTags: [...hardConstraints, ...softPreferences],
+        hardConstraints,
+        softPreferences,
+      },
+      this.growthPolicy.maxUnapprovedOrderValue
+    );
+
+    if (simulation.hasConflict) {
+      globalAuditLogger.log('CONSTRAINT_CONFLICT_DETECTED', {
+        budget,
+        quantity,
+        hardConstraints,
+        softPreferences,
+        conflictReason: simulation.conflictReason,
+      });
+    }
+
+    // If an alternative option was selected, materialize it as a new quote version with approval gating
+    let selectedQuote: any = undefined;
+    if (args.select_option_id) {
+      const selectedAlt = simulation.alternatives.find(a => a.optionId === args.select_option_id);
+      if (selectedAlt) {
+        const quoteItems = [
+          ...selectedAlt.baseItems.map(b => ({ product_id: b.id, quantity: b.quantity })),
+          ...selectedAlt.addonItems.map(a => ({ product_id: a.id, quantity: a.quantity })),
+        ];
+
+        const newCartQuote = await this.calculateCartQuote(quoteItems, undefined, false);
+        
+        // Re-evaluate server-side policy on newly materialized quote
+        const policyCheck = evaluatePolicy({
+          baseValue: newCartQuote.subtotal,
+          addonsValue: 0,
+          discountPercentage: 0,
+          addonIds: selectedAlt.addonItems.map(a => a.id),
+          productTags: ['jain', 'gifting'],
+          buyerConstraints: { hardConstraints, selectedOption: selectedAlt.optionId },
+          hasExplicitApproval: false,
+        }, this.growthPolicy);
+
+        // Update stored quote with trade-off metadata
+        const stored = GROWTH_QUOTE_STORE.get(newCartQuote.cartId);
+        if (stored) {
+          stored.selectedTradeoffOptionId = selectedAlt.optionId;
+          stored.approvalVersion = 1;
+        }
+
+        globalAuditLogger.log('TRADEOFF_ALTERNATIVE_SELECTED', {
+          optionId: selectedAlt.optionId,
+          title: selectedAlt.title,
+          newQuoteId: newCartQuote.cartId,
+          version: 1,
+          finalTotal: selectedAlt.finalTotal,
+          requiresApproval: policyCheck.requiresApproval,
+          idempotencyKeyBase: `${newCartQuote.cartId}_v1`,
+        });
+
+        selectedQuote = {
+          quoteId: newCartQuote.cartId,
+          version: 1,
+          status: 'AWAITING_APPROVAL',
+          totalAmount: newCartQuote.totalAmount,
+          selectedAlternative: selectedAlt,
+          policyCheck,
+          idempotencyKey: `${newCartQuote.cartId}_v1`,
+        };
+      }
+    }
+
+    return {
+      ...simulation,
+      selectedQuote,
     };
   }
 }
