@@ -1,0 +1,61 @@
+{
+  "name": "growth-twin-razorpay",
+  "version": "1.0.0",
+  "description": "Growth Twin for Razorpay — Bounded Model Context Protocol (MCP) Commerce & Settlement Gateway for Autonomous AI Buyers",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/Vijay-kumar2006/growth-twin-razorpay",
+  "bin": "bin/cli.js",
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build:package": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run build:package",
+    "build": "next build && npm run build:package",
+    "dev": "next dev",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "npm run test:core",
+    "test:core": "tsx scripts/test-core.ts",
+    "test:razoragent": "tsx scripts/test-razoragent.ts",
+    "test:mcp": "tsx scripts/test-mcp-direct.ts"
+  },
+  "keywords": [
+    "resence",
+    "razoragent",
+    "razorpay",
+    "mcp",
+    "model-context-protocol",
+    "agentic-commerce",
+    "ai-agents",
+    "fintech",
+    "guardrails",
+    "idempotency"
+  ],
+  "author": "Piyush Singh (Resence) <th.piyushsingh2007@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Piyush-Thakur7/razoragent.git"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "lucide-react": "^0.470.0",
+    "next": "16.2.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwindcss": "^4",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}
