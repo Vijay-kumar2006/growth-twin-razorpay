@@ -19,7 +19,7 @@
     "dev": "next dev",
     "start": "next start",
     "lint": "next lint",
-    "test": "npm run test:core",
+    "test": "npm run test:core && npm run test:mcp && npm run test:razoragent",
     "test:core": "tsx scripts/test-core.ts",
     "test:razoragent": "tsx scripts/test-razoragent.ts",
     "test:mcp": "tsx scripts/test-mcp-direct.ts"

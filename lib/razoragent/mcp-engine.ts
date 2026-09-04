@@ -3,21 +3,41 @@
  * Exposes standardized, callable commerce tools for autonomous AI agents.
  * 
  * Powered by a pluggable Merchant-Agnostic Catalog Architecture (Shopify, WooCommerce, Demo).
+ * Extended with Growth Twin deterministic revenue & policy tools.
  */
 
 import { CartItem, CartQuote, MCPToolDefinition, PolicyDecision, RazorpayOrderResponse } from './types';
-import { AVAILABLE_COUPONS, globalDemoCatalogProvider } from './catalog-data';
+import { AVAILABLE_COUPONS, MERCHANT_CATALOG, globalDemoCatalogProvider } from './catalog-data';
 import { CatalogProvider } from './catalog-provider';
 import { ShopifyCatalogProvider } from './shopify-catalog-provider';
 import { WooCommerceCatalogProvider } from './woocommerce-catalog-provider';
 import { globalGuardrailEngine } from './guardrails';
 import { globalIdempotencyManager } from './idempotency';
 import { globalRazorpayAdapter } from './razorpay';
+import { defaultPolicy, evaluatePolicy, MerchantPolicy, QuoteRequest } from '../policy-engine';
+import { CatalogItem, scoreAddons } from '../revenue-bundle';
+import { globalAuditLogger } from '../audit-logger';
 
 // Active cart session cache
 const CART_STORE: Map<string, CartQuote> = new Map();
 // Pending promise map to handle exact same-tick async race conditions
 const PENDING_ORDER_PROMISES: Map<string, Promise<any>> = new Map();
+
+// Stored growth twin quotes & approval status
+interface StoredGrowthQuote {
+  quoteId: string;
+  cartQuote: CartQuote;
+  baseItemIds: string[];
+  addonItemIds: string[];
+  productTags: string[];
+  discountPercentage: number;
+  hasExplicitApproval: boolean;
+  approvalVersion: number;
+  approvedAt?: string;
+  expiresAt: string;
+}
+
+const GROWTH_QUOTE_STORE: Map<string, StoredGrowthQuote> = new Map();
 
 export const MCP_TOOLS: MCPToolDefinition[] = [
   {
@@ -81,7 +101,7 @@ export const MCP_TOOLS: MCPToolDefinition[] = [
   },
   {
     name: 'create_guarded_order',
-    description: 'Creates a Razorpay Order protected by cryptographic SHA-256 idempotency locks and pre-settlement spend guardrails.',
+    description: 'Creates a Razorpay Order protected by cryptographic SHA-256 idempotency locks and pre-settlement spend guardrails. Strictly rejects unapproved high-value/discounted orders.',
     parameters: {
       type: 'object',
       properties: {
@@ -105,10 +125,68 @@ export const MCP_TOOLS: MCPToolDefinition[] = [
       required: ['order_id', 'payment_id', 'signature'],
     },
   },
+  // Growth Twin Tools
+  {
+    name: 'recommend_addons',
+    description: 'Calls the deterministic revenue-bundle engine to score and recommend compliant add-ons based on buyer budget headroom, compatibility, relevance, and merchant policy.',
+    parameters: {
+      type: 'object',
+      properties: {
+        base_product_ids: {
+          type: 'array',
+          description: 'List of base product IDs in cart',
+          items: { type: 'string' },
+        },
+        budget: { type: 'number', description: 'Total buyer budget in INR' },
+        quantity: { type: 'number', description: 'Target quantity for each hamper/item' },
+        requested_tags: {
+          type: 'array',
+          description: 'Buyer requested tags/preferences (e.g., ["jain", "note", "priority_shipping"])',
+          items: { type: 'string' },
+        },
+      },
+      required: ['base_product_ids', 'budget', 'quantity'],
+    },
+  },
+  {
+    name: 'evaluate_merchant_growth_policy',
+    description: 'Calls the server-side Growth Twin deterministic policy engine to verify quote compliance, maximum discount limits, high-value thresholds, and explicit approval requirements.',
+    parameters: {
+      type: 'object',
+      properties: {
+        cart_id: { type: 'string', description: 'Optional cart quote ID to evaluate' },
+        base_value: { type: 'number', description: 'Base items total in INR' },
+        addons_value: { type: 'number', description: 'Add-ons total in INR' },
+        discount_percentage: { type: 'number', description: 'Discount percentage requested' },
+        addon_ids: {
+          type: 'array',
+          description: 'Selected add-on IDs',
+          items: { type: 'string' },
+        },
+        product_tags: {
+          type: 'array',
+          description: 'Product tags of base items',
+          items: { type: 'string' },
+        },
+        has_explicit_approval: { type: 'boolean', description: 'Whether human/buyer explicitly approved the exact quote' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'get_commerce_contract',
+    description: 'Returns the machine-readable Growth Twin merchant commerce contract: catalog items, policy limits, allowed add-ons, quote terms, payment states, and approval rules.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
 ];
 
 export class MCPEngine {
   private catalogProvider: CatalogProvider;
+  private growthPolicy: MerchantPolicy = defaultPolicy;
 
   constructor(customProvider?: CatalogProvider) {
     if (customProvider) {
@@ -130,6 +208,14 @@ export class MCPEngine {
     return this.catalogProvider;
   }
 
+  public getGrowthPolicy(): MerchantPolicy {
+    return { ...this.growthPolicy };
+  }
+
+  public updateGrowthPolicy(newPolicy: Partial<MerchantPolicy>): void {
+    this.growthPolicy = { ...this.growthPolicy, ...newPolicy };
+  }
+
   public listTools(): MCPToolDefinition[] {
     return MCP_TOOLS;
   }
@@ -143,7 +229,7 @@ export class MCPEngine {
         return this.getProductDetails(args.product_id);
 
       case 'calculate_cart_quote':
-        return this.calculateCartQuote(args.items, args.coupon_code);
+        return this.calculateCartQuote(args.items, args.coupon_code, args.has_explicit_approval);
 
       case 'evaluate_spend_policy':
         return this.evaluateSpendPolicy(args.cart_id);
@@ -153,6 +239,16 @@ export class MCPEngine {
 
       case 'verify_payment_and_settle':
         return this.verifyPaymentAndSettle(args.order_id, args.payment_id, args.signature);
+
+      // Growth Twin tools
+      case 'recommend_addons':
+        return this.recommendAddons(args.base_product_ids, args.budget, args.quantity, args.requested_tags || []);
+
+      case 'evaluate_merchant_growth_policy':
+        return this.evaluateGrowthPolicy(args);
+
+      case 'get_commerce_contract':
+        return this.getCommerceContract();
 
       default:
         throw new Error(`Unknown MCP Tool: ${toolName}`);
@@ -192,9 +288,16 @@ export class MCPEngine {
     };
   }
 
-  private async calculateCartQuote(items: { product_id: string; quantity: number }[], couponCode?: string): Promise<CartQuote> {
+  private async calculateCartQuote(
+    items: { product_id: string; quantity: number }[],
+    couponCode?: string,
+    hasExplicitApproval: boolean = false
+  ): Promise<CartQuote> {
     const cartItems: CartItem[] = [];
     let subtotal = 0;
+    const baseIds: string[] = [];
+    const addonIds: string[] = [];
+    const productTags: string[] = [];
 
     for (const reqItem of items) {
       const product = await this.catalogProvider.getProductDetails(reqItem.product_id);
@@ -203,6 +306,16 @@ export class MCPEngine {
       const qty = Math.max(1, reqItem.quantity || 1);
       const lineTotal = product.price * qty;
       subtotal += lineTotal;
+
+      if (product.tags.includes('addon') || reqItem.product_id.startsWith('addon_')) {
+        addonIds.push(product.id);
+      } else {
+        baseIds.push(product.id);
+      }
+
+      if (product.tags) {
+        productTags.push(...product.tags);
+      }
 
       cartItems.push({
         productId: product.id,
@@ -235,6 +348,7 @@ export class MCPEngine {
     const totalAmount = discountedSubtotal + tax + shipping;
 
     const cartId = `cart_${Math.random().toString(36).substring(2, 10)}`;
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
     const quote: CartQuote = {
       cartId,
@@ -246,11 +360,34 @@ export class MCPEngine {
       shipping,
       totalAmount,
       currency: 'INR',
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      expiresAt,
     };
 
     // Cache cart quote for deterministic policy evaluation & order generation
     CART_STORE.set(cartId, quote);
+
+    // Track Growth Twin metadata
+    const discountPct = subtotal > 0 ? (discount / subtotal) * 100 : 0;
+    GROWTH_QUOTE_STORE.set(cartId, {
+      quoteId: cartId,
+      cartQuote: quote,
+      baseItemIds: baseIds,
+      addonItemIds: addonIds,
+      productTags,
+      discountPercentage: discountPct,
+      hasExplicitApproval,
+      approvalVersion: hasExplicitApproval ? 1 : 0,
+      approvedAt: hasExplicitApproval ? new Date().toISOString() : undefined,
+      expiresAt,
+    });
+
+    globalAuditLogger.log('QUOTE_CREATED', {
+      cartId,
+      totalAmount,
+      itemCount: cartItems.length,
+      hasExplicitApproval,
+    });
+
     return quote;
   }
 
@@ -265,14 +402,60 @@ export class MCPEngine {
       };
     }
 
-    return globalGuardrailEngine.evaluate(cart);
+    // Step 1: Base guardrail evaluation
+    const guardrailDecision = globalGuardrailEngine.evaluate(cart);
+    if (!guardrailDecision.allowed) {
+      return guardrailDecision;
+    }
+
+    // Step 2: Growth Twin Deterministic Policy evaluation
+    const growthQuote = GROWTH_QUOTE_STORE.get(cartId);
+    if (growthQuote) {
+      const quoteReq: QuoteRequest = {
+        baseValue: cart.subtotal,
+        addonsValue: 0,
+        discountPercentage: growthQuote.discountPercentage,
+        addonIds: growthQuote.addonItemIds,
+        productTags: growthQuote.productTags,
+        buyerConstraints: {},
+        hasExplicitApproval: growthQuote.hasExplicitApproval,
+      };
+
+      const growthCheck = evaluatePolicy(quoteReq, this.growthPolicy);
+      globalAuditLogger.log('POLICY_CHECK', {
+        cartId,
+        growthCheck,
+      });
+
+      if (!growthCheck.isCompliant) {
+        return {
+          allowed: false,
+          reasonCode: 'CATEGORY_PROHIBITED',
+          message: `Growth policy violation: ${growthCheck.reasons.join('; ')}`,
+          evaluatedAt: new Date().toISOString(),
+          metadata: { growthCheck },
+        };
+      }
+
+      if (growthCheck.requiresApproval && !growthQuote.hasExplicitApproval) {
+        return {
+          allowed: false,
+          reasonCode: 'HUMAN_APPROVAL_REQUIRED',
+          message: `Approval Gating: Quote ${cartId} requires explicit merchant/buyer approval before order creation (${growthCheck.reasons.join(', ')}).`,
+          evaluatedAt: new Date().toISOString(),
+          metadata: { growthCheck },
+        };
+      }
+    }
+
+    return guardrailDecision;
   }
 
   private async createGuardedOrder(
     cartId: string,
     idempotencyKey: string,
     buyerEmail: string = 'buyer.agent@resence.in'
-  ): Promise<{ success: boolean; decision: PolicyDecision; order?: RazorpayOrderResponse; isCached: boolean }> {
+  ): Promise<{ success: boolean; decision: PolicyDecision; order?: RazorpayOrderResponse; isCached: boolean; mode: 'mock'; label: 'Demo/Test Simulation' }> {
     const cart = CART_STORE.get(cartId);
     if (!cart) {
       const decision: PolicyDecision = {
@@ -281,13 +464,18 @@ export class MCPEngine {
         message: `Cart quote "${cartId}" has expired.`,
         evaluatedAt: new Date().toISOString(),
       };
-      return { success: false, decision, isCached: false };
+      return { success: false, decision, isCached: false, mode: 'mock', label: 'Demo/Test Simulation' };
     }
 
-    // Step 1: Pre-settlement deterministic guardrails
-    const policyDecision = globalGuardrailEngine.evaluate(cart);
+    // Step 1: Pre-settlement deterministic guardrails & Growth policy approval gating
+    const policyDecision = this.evaluateSpendPolicy(cartId);
     if (!policyDecision.allowed) {
-      return { success: false, decision: policyDecision, isCached: false };
+      globalAuditLogger.log('PAYMENT_ATTEMPT', {
+        cartId,
+        success: false,
+        reason: policyDecision.message,
+      });
+      return { success: false, decision: policyDecision, isCached: false, mode: 'mock', label: 'Demo/Test Simulation' };
     }
 
     // Step 2: Canonical fingerprint hash for same-tick async race-condition defense
@@ -297,7 +485,7 @@ export class MCPEngine {
     if (PENDING_ORDER_PROMISES.has(concurrencyKey)) {
       const existingPromise = PENDING_ORDER_PROMISES.get(concurrencyKey)!;
       const cachedOrder = await existingPromise;
-      return { success: true, decision: policyDecision, order: cachedOrder, isCached: true };
+      return { success: true, decision: policyDecision, order: cachedOrder, isCached: true, mode: 'mock', label: 'Demo/Test Simulation' };
     }
 
     // Step 3: Check memory-cached idempotency lock
@@ -308,6 +496,8 @@ export class MCPEngine {
         decision: policyDecision,
         order: lockResult.record.responseCache as RazorpayOrderResponse,
         isCached: true,
+        mode: 'mock',
+        label: 'Demo/Test Simulation',
       };
     }
 
@@ -315,6 +505,12 @@ export class MCPEngine {
     const orderExecutionPromise = (async () => {
       const order = await globalRazorpayAdapter.createOrder(cart, 'agent_buyer_01', buyerEmail);
       globalIdempotencyManager.completeOrder(idempotencyKey, order.id, order);
+      globalAuditLogger.log('PAYMENT_SUCCESS', {
+        orderId: order.id,
+        cartId,
+        idempotencyKey,
+        amount: cart.totalAmount,
+      });
       return order;
     })();
 
@@ -322,7 +518,7 @@ export class MCPEngine {
 
     try {
       const liveOrder = await orderExecutionPromise;
-      return { success: true, decision: policyDecision, order: liveOrder, isCached: false };
+      return { success: true, decision: policyDecision, order: liveOrder, isCached: false, mode: 'mock', label: 'Demo/Test Simulation' };
     } finally {
       setTimeout(() => {
         PENDING_ORDER_PROMISES.delete(concurrencyKey);
@@ -330,7 +526,7 @@ export class MCPEngine {
     }
   }
 
-  private verifyPaymentAndSettle(orderId: string, paymentId: string, signature: string): { verified: boolean; orderId: string; paymentId: string; settledAt: string } {
+  private verifyPaymentAndSettle(orderId: string, paymentId: string, signature: string): { verified: boolean; orderId: string; paymentId: string; settledAt: string; mode: 'mock'; label: 'Demo/Test Simulation' } {
     const isValid = globalRazorpayAdapter.verifySignature(orderId, paymentId, signature);
 
     return {
@@ -338,6 +534,223 @@ export class MCPEngine {
       orderId,
       paymentId,
       settledAt: new Date().toISOString(),
+      mode: 'mock',
+      label: 'Demo/Test Simulation',
+    };
+  }
+
+  // --- Growth Twin MCP Tool Handlers ---
+
+  private async recommendAddons(
+    baseProductIds: string[],
+    budget: number,
+    quantity: number,
+    requestedTags: string[]
+  ) {
+    const baseItems: CatalogItem[] = [];
+    for (const id of baseProductIds) {
+      const p = await this.catalogProvider.getProductDetails(id);
+      if (p) {
+        baseItems.push({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          tags: p.tags,
+          type: 'base',
+          inventoryConfidence: p.stock > 10 ? 1.0 : p.stock / 10,
+          merchantPriority: 0.9,
+        });
+      }
+    }
+
+    // Fallback if base product ID is demo-specific (e.g. hamp_jain_01)
+    if (baseItems.length === 0) {
+      baseItems.push({
+        id: baseProductIds[0] || 'hamp_jain_01',
+        name: 'Jain-Friendly Gourmet Snack Hamper',
+        price: 500,
+        tags: ['jain', 'gifting', 'snacks'],
+        type: 'base',
+        inventoryConfidence: 1.0,
+        merchantPriority: 1.0,
+      });
+    }
+
+    const availableAddons: CatalogItem[] = [
+      {
+        id: 'addon_note_01',
+        name: 'Personalized Foil-Embossed Gift Note & Wax Seal',
+        price: 50,
+        tags: ['note', 'personalized_note', 'custom_note', 'gifting', 'universal'],
+        type: 'addon',
+        inventoryConfidence: 1.0,
+        merchantPriority: 1.0,
+      },
+      {
+        id: 'addon_shipping_02',
+        name: 'Guaranteed Friday Express Priority Courier',
+        price: 120,
+        tags: ['priority_shipping', 'express_shipping', 'friday_delivery', 'shipping'],
+        type: 'addon',
+        inventoryConfidence: 0.95,
+        merchantPriority: 0.85,
+      },
+      {
+        id: 'addon_sweets_03',
+        name: 'Artisanal Jain-Certified Dry Fruit Mithai Box (100g)',
+        price: 100,
+        tags: ['jain', 'sweets', 'mithai', 'snacks', 'premium'],
+        type: 'addon',
+        inventoryConfidence: 0.9,
+        merchantPriority: 0.9,
+      },
+      {
+        id: 'addon_packaging_04',
+        name: 'Sustainable Hand-Woven Velvet Ribbon Packaging',
+        price: 60,
+        tags: ['premium_packaging', 'packaging', 'eco_friendly', 'universal'],
+        type: 'addon',
+        inventoryConfidence: 1.0,
+        merchantPriority: 0.75,
+      },
+    ];
+
+    const scored = scoreAddons(baseItems, availableAddons, {
+      budget,
+      quantity,
+      requestedTags,
+    });
+
+    const baseCostPerUnit = baseItems.reduce((acc, b) => acc + b.price, 0);
+    const baseTotal = baseCostPerUnit * quantity;
+    const budgetHeadroom = budget - baseTotal;
+
+    const recommendations = scored.map((s) => {
+      const lineCost = s.item.price * quantity;
+      const policyAllowed = this.growthPolicy.permittedAddons.some(
+        (p) => s.item.tags.includes(p) || p === s.item.id || s.item.tags.includes('universal')
+      );
+
+      return {
+        sku: s.item.id,
+        name: s.item.name,
+        unitPrice: s.item.price,
+        quantity,
+        incrementalRevenue: lineCost,
+        score: s.score,
+        relevanceReason: s.reasons.find((r) => r.includes('preferences')) || 'General compatibility with corporate gifting',
+        compatibilityReason: s.reasons.find((r) => r.includes('compatible')) || 'Universal add-on standard',
+        budgetHeadroomRemainingAfter: budgetHeadroom - lineCost,
+        merchantPolicyPermitted: policyAllowed,
+        reasons: s.reasons,
+      };
+    });
+
+    return {
+      baseTotal,
+      budget,
+      quantity,
+      budgetHeadroom,
+      recommendationCount: recommendations.length,
+      recommendations,
+      mode: 'mock',
+      label: 'Demo/Test Simulation',
+    };
+  }
+
+  private evaluateGrowthPolicy(args: Record<string, any>) {
+    let baseValue = args.base_value || 0;
+    let addonsValue = args.addons_value || 0;
+    let discountPercentage = args.discount_percentage || 0;
+    let addonIds = args.addon_ids || [];
+    let productTags = args.product_tags || [];
+    let hasExplicitApproval = args.has_explicit_approval || false;
+
+    if (args.cart_id && CART_STORE.has(args.cart_id)) {
+      const cart = CART_STORE.get(args.cart_id)!;
+      baseValue = cart.subtotal;
+      const gq = GROWTH_QUOTE_STORE.get(args.cart_id);
+      if (gq) {
+        discountPercentage = gq.discountPercentage;
+        addonIds = gq.addonItemIds;
+        productTags = gq.productTags;
+        hasExplicitApproval = gq.hasExplicitApproval;
+      }
+    }
+
+    const checkResult = evaluatePolicy(
+      {
+        baseValue,
+        addonsValue,
+        discountPercentage,
+        addonIds,
+        productTags,
+        buyerConstraints: {},
+        hasExplicitApproval,
+      },
+      this.growthPolicy
+    );
+
+    const total = baseValue + addonsValue;
+    const finalAmount = total - (total * discountPercentage) / 100;
+
+    let nextPermittedAction = 'PROCEED_TO_PAYMENT_CREATION';
+    if (!checkResult.isCompliant) {
+      nextPermittedAction = 'ADJUST_QUOTE_TO_COMPLY_WITH_POLICY';
+    } else if (checkResult.requiresApproval && !hasExplicitApproval) {
+      nextPermittedAction = 'AWAIT_BUYER_OR_MERCHANT_EXPLICIT_APPROVAL';
+    }
+
+    return {
+      isCompliant: checkResult.isCompliant,
+      requiresApproval: checkResult.requiresApproval,
+      hasExplicitApproval,
+      rejectionReasons: checkResult.reasons,
+      policyChecks: {
+        maxDiscountAllowed: `${this.growthPolicy.maxDiscountPercentage}%`,
+        requestedDiscount: `${discountPercentage}%`,
+        maxUnapprovedOrderValue: `₹${this.growthPolicy.maxUnapprovedOrderValue}`,
+        finalOrderValue: `₹${finalAmount}`,
+        permittedAddons: this.growthPolicy.permittedAddons,
+        prohibitedTagsForAddons: this.growthPolicy.prohibitedTagsForAddons,
+      },
+      quoteExpiryMinutes: this.growthPolicy.quoteExpiryMinutes,
+      nextPermittedAction,
+      mode: 'mock',
+      label: 'Demo/Test Simulation',
+    };
+  }
+
+  private getCommerceContract() {
+    return {
+      merchant: {
+        name: 'Growth Twin Demo Gifting & Gourmet Store',
+        protocolVersion: 'MCP_GROWTH_TWIN_v1.0',
+        environment: 'TEST_SANDBOX',
+        label: 'Demo/Test Simulation',
+      },
+      policyLimits: {
+        maxDiscountPercentage: this.growthPolicy.maxDiscountPercentage,
+        maxUnapprovedOrderValue: this.growthPolicy.maxUnapprovedOrderValue,
+        permittedAddons: this.growthPolicy.permittedAddons,
+        prohibitedTagsForAddons: this.growthPolicy.prohibitedTagsForAddons,
+        requireExplicitApprovalForLink: this.growthPolicy.requireExplicitApprovalForLink,
+        quoteExpiryMinutes: this.growthPolicy.quoteExpiryMinutes,
+      },
+      paymentStates: [
+        'DRAFT_INTENT',
+        'QUOTE_CREATED',
+        'AWAITING_APPROVAL',
+        'APPROVED',
+        'PAYMENT_ACTION_STARTED',
+        'PAYMENT_CREATED',
+        'PAYMENT_FAILED',
+        'RECOVERY_AVAILABLE',
+        'COMPLETED',
+      ],
+      allowedPaymentRails: ['razorpay_orders_api', 'razorpay_payment_links', 'upi_intent'],
+      idempotencyRule: 'quoteId + approvalVersion SHA-256 fingerprint lock',
+      terms: 'The model recommends; deterministic policy code authorizes.',
     };
   }
 }

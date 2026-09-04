@@ -7,11 +7,11 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./lib/razoragent",
+    "rootDir": "./lib",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["lib/razoragent/**/*"]
+  "include": ["lib/**/*"]
 }

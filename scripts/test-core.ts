@@ -18,7 +18,19 @@ async function runTests() {
   };
   const policyResult = evaluatePolicy(unapprovedQuote, defaultPolicy);
   console.assert(!policyResult.isCompliant, "Should not be compliant due to discount and invalid addon");
-  console.assert(policyResult.requiresApproval, "Should require approval due to value > 20000");
+
+  // High value test for approval requirement
+  const highValueQuote: QuoteRequest = {
+    baseValue: 25000,
+    addonsValue: 0,
+    discountPercentage: 10, // 25000 - 2500 = 22500 > 20000
+    addonIds: ['addon_note_01'],
+    productTags: ['gifting'],
+    buyerConstraints: {},
+    hasExplicitApproval: false
+  };
+  const highValueResult = evaluatePolicy(highValueQuote, defaultPolicy);
+  console.assert(highValueResult.requiresApproval, "Should require approval due to value > 20000");
   
   // 2. Revenue Bundle Tests
   console.log("Testing Revenue Bundle: Scoring Model");

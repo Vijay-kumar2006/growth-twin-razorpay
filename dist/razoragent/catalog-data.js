@@ -1,0 +1,791 @@
+"use strict";
+/**
+ * RazorAgent Merchant Catalog Data
+ * Realistic product catalog with pricing, stock levels, specs, and promotion rules.
+ * Expanded to 28+ varied products across 7 categories for realistic free-text semantic search.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.globalDemoCatalogProvider = exports.DemoCatalogProvider = exports.AVAILABLE_COUPONS = exports.MERCHANT_CATALOG = void 0;
+exports.MERCHANT_CATALOG = [
+    // --- 1. Electronics & Audio ---
+    {
+        id: 'prod_kb_01',
+        name: 'Keychron K2 Pro Wireless Mechanical Keyboard',
+        category: 'electronics',
+        price: 3499,
+        rating: 4.9,
+        reviewCount: 428,
+        stock: 14,
+        description: 'Compact 75% layout wireless mechanical keyboard with hot-swappable Gateron G Pro switches, RGB backlight, and Mac/Windows toggle.',
+        specs: {
+            connectivity: 'Bluetooth 5.1 / Type-C Wired',
+            switches: 'Gateron G Pro Brown / Red',
+            battery: '4000 mAh (up to 240 hours)',
+            keycaps: 'Double-shot OSA PBT',
+        },
+        tags: ['keyboard', 'mechanical', 'wireless', 'office', 'coding', 'gadget', 'keychron', 'typing'],
+        image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500', 'RESENCE2026'],
+    },
+    {
+        id: 'prod_hp_02',
+        name: 'Sony WH-1000XM5 Active Noise Cancelling Headphones',
+        category: 'electronics',
+        price: 18990,
+        rating: 4.8,
+        reviewCount: 1250,
+        stock: 8,
+        description: 'Industry-leading active noise cancellation with two processors and 8 microphones. Hi-Res audio wireless with 30-hour battery life.',
+        specs: {
+            battery: '30 hours with ANC on',
+            anc: 'Dual Processor V1 + HD QN1',
+            weight: '250g',
+            charging: '3 min charge = 3 hours playback',
+        },
+        tags: ['headphones', 'headphone', 'anc', 'audio', 'wireless', 'premium', 'sony', 'music', 'over-ear'],
+        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    {
+        id: 'prod_ear_03',
+        name: 'Nothing Ear (2) True Wireless Earbuds',
+        category: 'electronics',
+        price: 3999,
+        rating: 4.6,
+        reviewCount: 680,
+        stock: 22,
+        description: 'Ultra-light 4.5g transparent design with Hi-Res Audio certified 11.6mm custom driver and smart Active Noise Cancellation up to 40dB.',
+        specs: {
+            driver: '11.6mm dynamic',
+            anc: 'Personalised ANC up to 40dB',
+            battery: '36 hours total with case',
+            waterResistance: 'IP54 buds / IP55 case',
+        },
+        tags: ['earbuds', 'earbud', 'wireless', 'anc', 'audio', 'gym', 'commute', 'nothing', 'tws', 'airpods', 'bluetooth'],
+        image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500', 'EARBUD20'],
+    },
+    {
+        id: 'prod_ph_09',
+        name: 'Apple iPhone 16 Pro (128GB - Natural Titanium)',
+        category: 'electronics',
+        price: 69999,
+        rating: 4.9,
+        reviewCount: 890,
+        stock: 6,
+        description: 'Flagship 5G smartphone with A18 Pro chip, 48MP Fusion camera system, Camera Control, and aerospace-grade titanium design.',
+        specs: {
+            chip: 'A18 Pro with 6-core GPU',
+            display: '6.3-inch Super Retina XDR OLED',
+            camera: '48MP Main + 12MP 5x Telephoto',
+            battery: 'Up to 27 hours video playback',
+        },
+        tags: ['phone', 'smartphone', 'iphone', 'apple', 'mobile', 'electronics', '5g', 'flagship', 'ios'],
+        image: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    {
+        id: 'prod_laptop_01',
+        name: 'Apple MacBook Air 13" (M3 Chip, 8GB RAM, 256GB SSD - Midnight)',
+        category: 'electronics',
+        price: 99900,
+        rating: 4.9,
+        reviewCount: 410,
+        stock: 5,
+        description: 'Strikingly thin and fast laptop with Apple M3 chip, 13.6-inch Liquid Retina display, 1080p FaceTime HD camera, and up to 18 hours battery life.',
+        specs: {
+            chip: 'Apple M3 8-Core CPU / 8-Core GPU',
+            display: '13.6-inch Liquid Retina IPS',
+            memory: '8GB Unified Memory',
+            storage: '256GB SSD',
+        },
+        tags: ['laptop', 'macbook', 'notebook', 'computer', 'apple', 'm3', 'electronics', 'ultrabook'],
+        image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    {
+        id: 'prod_laptop_02',
+        name: 'ASUS Vivobook 15 Thin & Light Laptop (Core i5, 16GB, 512GB SSD)',
+        category: 'electronics',
+        price: 49990,
+        rating: 4.6,
+        reviewCount: 320,
+        stock: 8,
+        description: '15.6" FHD anti-glare display laptop powered by Intel Core i5 12th Gen processor, 16GB DDR4 RAM, 512GB NVMe SSD, and Windows 11 Home.',
+        specs: {
+            processor: 'Intel Core i5-1235U (10 Cores, 12 Threads)',
+            display: '15.6" FHD (1920 x 1080) 60Hz',
+            memory: '16GB DDR4 (Expandable)',
+            storage: '512GB M.2 NVMe PCIe 3.0 SSD',
+        },
+        tags: ['laptop', 'notebook', 'computer', 'asus', 'windows', 'work', 'student', 'electronics'],
+        image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    {
+        id: 'prod_mouse_05',
+        name: 'Logitech MX Master 3S Wireless Performance Mouse',
+        category: 'electronics',
+        price: 8995,
+        rating: 4.9,
+        reviewCount: 940,
+        stock: 18,
+        description: 'Quiet clicks and 8K DPI track-on-glass sensor. MagSpeed electromagnetic scrolling wheel with ergonomic thumb rest.',
+        specs: {
+            sensor: '8000 DPI Darkfield',
+            connectivity: 'Bluetooth + Logi Bolt USB',
+            battery: 'Up to 70 days per charge',
+            customization: '7 programmable buttons',
+        },
+        tags: ['mouse', 'wireless mouse', 'logitech', 'productivity', 'office', 'ergonomic', 'mx-master', 'bluetooth', 'electronics'],
+        image: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500', 'RESENCE2026'],
+    },
+    {
+        id: 'prod_mouse_06',
+        name: 'Logitech Pebble M350 Wireless Silent Optical Mouse',
+        category: 'electronics',
+        price: 1495,
+        rating: 4.7,
+        reviewCount: 780,
+        stock: 24,
+        description: 'Modern, slim, and beautiful pebble shape with 90% noise reduction silent clicking. Dual connectivity via Bluetooth or 2.4GHz USB receiver.',
+        specs: {
+            sensor: 'High Precision Optical Tracking (1000 DPI)',
+            connectivity: 'Bluetooth Low Energy & 2.4GHz USB',
+            battery: '18 Months (1x AA)',
+            weight: '100g (including battery)',
+        },
+        tags: ['mouse', 'wireless mouse', 'bluetooth mouse', 'logitech', 'pebble', 'silent mouse', 'compact mouse', 'electronics'],
+        image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500'],
+    },
+    {
+        id: 'prod_spk_10',
+        name: 'JBL Flip 6 Waterproof Portable Bluetooth Speaker',
+        category: 'electronics',
+        price: 8999,
+        rating: 4.7,
+        reviewCount: 520,
+        stock: 15,
+        description: 'Eco-friendly bold sound with 2-way speaker system, racetrack-shaped woofer, separate tweeter, and IP67 waterproof and dustproof design.',
+        specs: {
+            power: '30W RMS',
+            battery: '12 hours playtime',
+            durability: 'IP67 Waterproof & Dustproof',
+            connectivity: 'Bluetooth 5.1 PartyBoost',
+        },
+        tags: ['speaker', 'bluetooth speaker', 'audio', 'sound', 'jbl', 'waterproof', 'portable', 'music', 'party', 'electronics'],
+        image: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500', 'RESENCE2026'],
+    },
+    {
+        id: 'prod_spk_11',
+        name: 'boAt Stone 180 5W Portable Bluetooth Speaker (IPX7)',
+        category: 'electronics',
+        price: 1299,
+        rating: 4.5,
+        reviewCount: 890,
+        stock: 30,
+        description: 'Powerful 5W immersive sound with 1.75" dynamic drivers, up to 10 hours playback, and IPX7 sweat & water resistance.',
+        specs: {
+            power: '5W RMS',
+            battery: 'Up to 10 hours',
+            waterproof: 'IPX7 Water Resistance',
+            connectivity: 'Bluetooth v5.0 / AUX',
+        },
+        tags: ['speaker', 'bluetooth speaker', 'portable speaker', 'wireless speaker', 'boat', 'budget speaker', 'electronics'],
+        image: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500'],
+    },
+    {
+        id: 'prod_pwr_11',
+        name: 'Anker 737 Power Bank (PowerCore 24K - 140W)',
+        category: 'electronics',
+        price: 9999,
+        rating: 4.8,
+        reviewCount: 380,
+        stock: 12,
+        description: 'Ultra-powerful 140W two-way fast charging power bank with smart digital display, GaNPrime technology, and 24,000mAh capacity for laptops and phones.',
+        specs: {
+            capacity: '24,000 mAh (86.4Wh)',
+            output: '140W Max USB-C PD 3.1',
+            ports: '2x USB-C, 1x USB-A',
+            display: 'Smart Digital Status Screen',
+        },
+        tags: ['powerbank', 'power bank', 'charger', 'battery', 'anker', 'fast charger', 'laptop charger', 'travel', 'gadget'],
+        image: 'https://images.unsplash.com/photo-1609592807904-e7fa69919f18?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500'],
+    },
+    {
+        id: 'prod_kindle_12',
+        name: 'Amazon Kindle Paperwhite (16GB - 6.8" Glare-Free Display)',
+        category: 'electronics',
+        price: 12999,
+        rating: 4.8,
+        reviewCount: 1100,
+        stock: 9,
+        description: 'Now with a 6.8" display, thinner borders, adjustable warm light, up to 10 weeks of battery life, and 20% faster page turns.',
+        specs: {
+            display: '6.8" 300 ppi glare-free',
+            storage: '16GB (thousands of books)',
+            battery: 'Up to 10 weeks',
+            waterproof: 'IPX8 rated',
+        },
+        tags: ['kindle', 'ereader', 'e-reader', 'books', 'reading', 'amazon', 'display', 'tablet'],
+        image: 'https://images.unsplash.com/photo-1592496431122-2349e0fbc666?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    {
+        id: 'prod_watch_13',
+        name: 'Samsung Galaxy Watch 6 LTE (44mm - Bluetooth & eSIM)',
+        category: 'electronics',
+        price: 24999,
+        rating: 4.7,
+        reviewCount: 460,
+        stock: 7,
+        description: 'Premium smartwatch with advanced sleep coaching, ECG & blood pressure monitoring, Sapphire Crystal glass, and LTE connectivity.',
+        specs: {
+            display: '1.5" Super AMOLED Sapphire Crystal',
+            sensors: 'BioActive Sensor (HR, ECG, BIA)',
+            connectivity: 'LTE, Bluetooth 5.3, NFC, GPS',
+            waterproof: '5ATM + IP68',
+        },
+        tags: ['watch', 'smartwatch', 'samsung', 'fitness', 'tracker', 'wearable', 'health', 'heart rate'],
+        image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    // --- 2. Apparel & Footwear ---
+    {
+        id: 'prod_tshirt_14',
+        name: 'Classic Heavyweight 240 GSM Cotton T-Shirt (Navy Blue)',
+        category: 'apparel',
+        price: 799,
+        rating: 4.6,
+        reviewCount: 340,
+        stock: 35,
+        description: 'Pre-shrunk 100% combed cotton everyday crew neck t-shirt with reinforced double-needle collar and relaxed boxy drape.',
+        specs: {
+            material: '100% Combed Compact Cotton',
+            fabricWeight: '240 GSM Heavyweight',
+            fit: 'Relaxed Streetwear Fit',
+            color: 'Navy Blue',
+        },
+        tags: ['tshirt', 't-shirt', 'shirt', 'clothing', 'apparel', 'cotton', 'navy', 'casual', 'streetwear', 'top'],
+        image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500'],
+    },
+    {
+        id: 'prod_jeans_15',
+        name: "Levi's 511 Slim Fit Stretch Denim Jeans (Dark Indigo)",
+        category: 'apparel',
+        price: 2499,
+        rating: 4.7,
+        reviewCount: 780,
+        stock: 20,
+        description: 'A modern slim with room to move. Cut close through the thigh with a slim leg opening and built-in +Flex stretch technology.',
+        specs: {
+            material: '99% Cotton, 1% Elastane',
+            fit: 'Slim through thigh and leg',
+            closure: 'Zip fly with metal button',
+        },
+        tags: ['jeans', 'denim', 'pants', 'trousers', 'levis', 'apparel', 'clothing', 'fashion'],
+        image: 'https://images.unsplash.com/photo-1542272604-780c96856592?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500', 'RESENCE2026'],
+    },
+    {
+        id: 'prod_shoes_16',
+        name: 'Nike Air Zoom Pegasus 40 Road Running Shoes (Black/White)',
+        category: 'apparel',
+        price: 8995,
+        rating: 4.8,
+        reviewCount: 920,
+        stock: 11,
+        description: 'Springy responsiveness and neutral support for everyday runs. Dual Zoom Air units with React foam midsole and engineered mesh upper.',
+        specs: {
+            cushioning: 'Nike React Foam + 2 Zoom Air Units',
+            drop: '10mm heel-to-toe drop',
+            weight: '288g (Men size 9)',
+            terrain: 'Road & Track',
+        },
+        tags: ['shoes', 'running shoes', 'sneakers', 'footwear', 'nike', 'running', 'gym', 'sports', 'athletic', 'walk'],
+        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    {
+        id: 'prod_shoes_17',
+        name: 'Puma Everyday Lightweight Cushion Running Shoes',
+        category: 'apparel',
+        price: 1899,
+        rating: 4.5,
+        reviewCount: 410,
+        stock: 25,
+        description: 'Versatile, lightweight everyday athletic sneakers with SoftFoam+ sockliner for superior cushioning and durable rubber traction outsole.',
+        specs: {
+            upper: 'Breathable Knit Mesh',
+            midsole: 'SoftFoam+ Cushioning',
+            sole: 'Non-slip Traction Rubber',
+        },
+        tags: ['shoes', 'sneakers', 'puma', 'running shoes', 'footwear', 'budget shoes', 'gym', 'walking'],
+        image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500'],
+    },
+    {
+        id: 'prod_hoodie_18',
+        name: 'French Terry Cotton Oversized Winter Hoodie (Charcoal)',
+        category: 'apparel',
+        price: 1499,
+        rating: 4.7,
+        reviewCount: 290,
+        stock: 18,
+        description: 'Premium 380 GSM unbrushed French Terry cotton hoodie with kangaroo pocket, double-layered hood, and ribbed cuffs.',
+        specs: {
+            material: '100% French Terry Cotton (380 GSM)',
+            fit: 'Oversized Boxy Fit',
+            features: 'Drop shoulders, Kangaroo pocket',
+        },
+        tags: ['hoodie', 'sweatshirt', 'winter', 'apparel', 'clothing', 'warm', 'cotton', 'jacket', 'pullover'],
+        image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500', 'RESENCE2026'],
+    },
+    // --- 3. Bags & Accessories ---
+    {
+        id: 'prod_bag_06',
+        name: 'Aer Travel Pack 3 Minimalist Carry-On Tech Backpack',
+        category: 'apparel',
+        price: 6500,
+        rating: 4.9,
+        reviewCount: 310,
+        stock: 5,
+        description: 'Versatile carry-on backpack designed for smart one-bag travel. 1680D Cordura ballistic nylon with padded 16" laptop pocket and lay-flat packing.',
+        specs: {
+            volume: '35 Liters',
+            material: '1680D Cordura Ballistic Nylon',
+            laptopCompartment: 'Suspended padded pocket fits up to 16" MacBook Pro',
+            dimensions: '21.5" x 13" x 9"',
+        },
+        tags: ['backpack', 'bag', 'travel', 'laptop bag', 'minimalist', 'luggage', 'aer', 'tech pack'],
+        image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['TRAVEL15'],
+    },
+    {
+        id: 'prod_wallet_19',
+        name: 'Bellroy Hide & Seek RFID Leather Bi-Fold Wallet',
+        category: 'apparel',
+        price: 4800,
+        rating: 4.8,
+        reviewCount: 510,
+        stock: 14,
+        description: 'Slim leather wallet with RFID protection, hidden coin pouch, flat bill section, and 12-card capacity crafted from eco-tanned leather.',
+        specs: {
+            material: 'Premium environmentally certified leather',
+            capacity: '5-12 cards + flat bills',
+            security: 'RFID blocking lining',
+            dimensions: '115mm x 95mm',
+        },
+        tags: ['wallet', 'leather wallet', 'accessories', 'leather', 'bellroy', 'rfid', 'cards', 'money', 'pocket'],
+        image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500', 'RESENCE2026'],
+    },
+    {
+        id: 'prod_sunglasses_20',
+        name: 'Ray-Ban Classic Wayfarer Polarized Sunglasses (Tortoise/Green)',
+        category: 'apparel',
+        price: 7590,
+        rating: 4.8,
+        reviewCount: 670,
+        stock: 8,
+        description: 'The most recognizable style in the history of sunglasses. Polarized G-15 crystal green lenses with 100% UV protection and acetate frame.',
+        specs: {
+            frame: 'Polished Tortoise Acetate',
+            lenses: 'Polarized G-15 Green Crystal',
+            uvProtection: '100% UVA/UVB Filter',
+            size: '50-22 Standard',
+        },
+        tags: ['sunglasses', 'glasses', 'eyewear', 'rayban', 'ray-ban', 'polarized', 'fashion', 'accessories', 'shades'],
+        image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    {
+        id: 'prod_watch_21',
+        name: 'Fossil Townsman Automatic Skeleton Leather Watch',
+        category: 'apparel',
+        price: 11495,
+        rating: 4.7,
+        reviewCount: 380,
+        stock: 6,
+        description: 'Mechanical skeleton dial showcasing self-winding automatic movement with stainless steel case and genuine brown leather strap.',
+        specs: {
+            movement: 'Mechanical Automatic (No battery)',
+            caseSize: '44mm Stainless Steel',
+            strap: '22mm Genuine Amber Leather',
+            waterResistance: '5 ATM (50 meters)',
+        },
+        tags: ['watch', 'analog watch', 'automatic watch', 'fossil', 'leather watch', 'accessories', 'luxury', 'timepiece'],
+        image: 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    // --- 4. Home Office & Desk Setup ---
+    {
+        id: 'prod_mat_07',
+        name: 'Nordic Wool & Natural Rubber Desk Mat (Extra Large 90x40cm)',
+        category: 'home-office',
+        price: 1499,
+        rating: 4.7,
+        reviewCount: 185,
+        stock: 28,
+        description: 'Handcrafted Merino wool felt surface with anti-slip natural rubber base. Protects your desk while providing smooth mouse tracking.',
+        specs: {
+            dimensions: '900mm x 400mm x 4mm',
+            materials: 'Natural Wool Felt + Textured Natural Rubber',
+            waterRepellent: 'Hydrophobic nano-coating',
+        },
+        tags: ['desk mat', 'desk pad', 'mousepad', 'workspace', 'home-office', 'nordic', 'setup', 'mat', 'mouse mat'],
+        image: 'https://images.unsplash.com/photo-1616440347437-b1c73416efc2?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['DESK200', 'AGENT500'],
+    },
+    {
+        id: 'prod_light_22',
+        name: 'BenQ ScreenBar Halo Wireless Monitor Light Bar',
+        category: 'home-office',
+        price: 12990,
+        rating: 4.9,
+        reviewCount: 240,
+        stock: 9,
+        description: 'Zero screen glare monitor lamp with back ambient lighting, auto-dimming precision sensor, and wireless desktop controller.',
+        specs: {
+            illuminance: '800 Lux at center',
+            colorTemperature: '2700K to 6500K adjustable',
+            controller: 'Wireless 2.4GHz Touch Puck',
+            power: 'USB-C 5V 1.5A',
+        },
+        tags: ['light bar', 'lamp', 'desk light', 'monitor light', 'benq', 'screenbar', 'office', 'home-office', 'setup'],
+        image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    {
+        id: 'prod_stand_23',
+        name: 'Solid Walnut Wood Ergonomic Laptop Riser Stand',
+        category: 'home-office',
+        price: 2200,
+        rating: 4.8,
+        reviewCount: 160,
+        stock: 19,
+        description: 'Elevates laptop screen to eye level to prevent neck strain. Crafted from solid American walnut hardwood with cork feet and matte protective oil finish.',
+        specs: {
+            material: 'Solid American Walnut + Natural Cork',
+            compatibility: 'All laptops 11" to 17"',
+            elevation: '15cm eye level elevation',
+        },
+        tags: ['laptop stand', 'stand', 'wooden stand', 'walnut', 'ergonomic', 'home-office', 'desk setup', 'riser'],
+        image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['DESK200', 'AGENT500'],
+    },
+    // --- 5. Specialty Coffee & Beverages ---
+    {
+        id: 'prod_cf_04',
+        name: 'Blue Tokai Specialty Coffee Roast (Attikan Estate - 500g)',
+        category: 'specialty-coffee',
+        price: 780,
+        rating: 4.9,
+        reviewCount: 890,
+        stock: 45,
+        description: 'Single-origin 100% Arabica dark roast coffee with tasting notes of dark chocolate, figs, and roasted almonds. Roasted fresh weekly in Bangalore.',
+        specs: {
+            origin: 'Attikan Estate, Biligiriranga Hills, Karnataka',
+            altitude: '1650 meters',
+            process: 'Washed',
+            roastLevel: 'Medium-Dark',
+        },
+        tags: ['coffee', 'beans', 'arabica', 'espresso', 'roast', 'specialty-coffee', 'blue-tokai', 'ground coffee'],
+        image: 'https://images.unsplash.com/photo-1587734195503-904fca47e0e9?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['COFFEE100', 'RESENCE2026'],
+    },
+    {
+        id: 'prod_grinder_24',
+        name: 'Timemore Chestnut C3 PRO Manual Conical Burr Coffee Grinder',
+        category: 'specialty-coffee',
+        price: 4899,
+        rating: 4.8,
+        reviewCount: 310,
+        stock: 12,
+        description: 'Upgraded S2C660 stainless steel conical burrs for uniform grind distribution from fine espresso to coarse French press. Foldable handle design.',
+        specs: {
+            burrs: '38mm Stainless Steel Spike-to-Cut (S2C)',
+            capacity: '25g whole beans',
+            body: 'Matte Aluminum Alloy Uni-body',
+        },
+        tags: ['grinder', 'coffee grinder', 'burr grinder', 'timemore', 'espresso', 'specialty-coffee', 'manual grinder'],
+        image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500', 'RESENCE2026'],
+    },
+    {
+        id: 'prod_kettle_25',
+        name: 'Fellow Stagg EKG Electric Gooseneck Pour-Over Kettle',
+        category: 'specialty-coffee',
+        price: 14500,
+        rating: 4.9,
+        reviewCount: 420,
+        stock: 4,
+        description: 'Variable temperature control kettle with fluted gooseneck spout for precision pour rate, LCD screen, and 60-minute hold mode.',
+        specs: {
+            capacity: '0.9 Liters',
+            tempRange: '135°F to 212°F (57°C to 100°C)',
+            power: '1200W Rapid Heat',
+            finish: 'Matte Black Stainless Steel',
+        },
+        tags: ['kettle', 'electric kettle', 'gooseneck', 'pour over', 'fellow', 'stagg', 'coffee', 'specialty-coffee'],
+        image: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['PREMIUM10'],
+    },
+    // --- 6. Wellness & Nutrition ---
+    {
+        id: 'prod_whey_26',
+        name: 'Optimum Nutrition Gold Standard 100% Whey Protein (Double Rich Chocolate - 2kg)',
+        category: 'wellness',
+        price: 3499,
+        rating: 4.8,
+        reviewCount: 1420,
+        stock: 30,
+        description: 'World #1 whey protein with 24g protein isolate, 5.5g naturally occurring BCAAs, and 4g glutamine per serving. Fast-absorbing post-workout recovery.',
+        specs: {
+            weight: '2.27 kg (5 lbs - 74 servings)',
+            proteinPerServing: '24g Whey Protein Isolate',
+            flavor: 'Double Rich Chocolate',
+        },
+        tags: ['protein', 'whey', 'whey protein', 'supplements', 'fitness', 'gym', 'nutrition', 'optimum nutrition', 'workout'],
+        image: 'https://images.unsplash.com/photo-1579722821273-0f6c7d44362f?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['FIT10', 'AGENT500'],
+    },
+    {
+        id: 'prod_plant_27',
+        name: 'The Whole Truth 100% Plant Protein Powder (Rich Cocoa - 1kg)',
+        category: 'wellness',
+        price: 1799,
+        rating: 4.7,
+        reviewCount: 380,
+        stock: 22,
+        description: 'Clean vegan protein made from pea and brown rice isolate with raw cocoa and real monk fruit sweetener. 0g added sugar, zero chemical gums.',
+        specs: {
+            weight: '1 kg (30 servings)',
+            proteinPerServing: '24g Organic Plant Protein',
+            sweetener: 'Monk Fruit Extract (0 Sugar)',
+        },
+        tags: ['vegan protein', 'plant protein', 'protein', 'organic', 'nutrition', 'health', 'fitness', 'the whole truth'],
+        image: 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['FIT10', 'AGENT500'],
+    },
+    {
+        id: 'prod_multi_28',
+        name: 'Fast&Up Daily Multivitamins & Minerals Effervescent (Orange - 60 Tabs)',
+        category: 'wellness',
+        price: 450,
+        rating: 4.6,
+        reviewCount: 620,
+        stock: 50,
+        description: 'Complete daily blend of 21 essential vitamins and minerals in fast-acting effervescent drinkable tablets. Boosts immunity and daily energy.',
+        specs: {
+            count: '60 Effervescent Tablets (3 tubes of 20)',
+            vitamins: 'Vitamin C, B-Complex, Zinc, D3, Magnesium',
+            flavor: 'Natural Orange',
+        },
+        tags: ['vitamins', 'multivitamin', 'supplements', 'wellness', 'immunity', 'health', 'tablets', 'daily'],
+        image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['AGENT500'],
+    },
+    // --- 7. Software & Cloud Subscriptions ---
+    {
+        id: 'prod_app_08',
+        name: 'Grammarly Business Annual AI Writing Assistant License',
+        category: 'software-licenses',
+        price: 12000,
+        rating: 4.8,
+        reviewCount: 310,
+        stock: 50,
+        description: 'Enterprise AI writing assistant license for teams with real-time tone detection, style guides, and snippet shortcuts.',
+        specs: {
+            seats: 'Up to 5 team members',
+            billing: 'Annual upfront',
+            support: 'Priority 24/7 SLA',
+        },
+        tags: ['software', 'license', 'ai', 'productivity', 'writing', 'saas', 'grammarly', 'subscription'],
+        image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=600&q=80',
+        eligibleCoupons: ['SAAS15', 'PREMIUM10'],
+    },
+];
+exports.AVAILABLE_COUPONS = {
+    AGENT500: { flatDiscountINR: 500, minSpendINR: 2500, description: '₹500 Flat Off on orders above ₹2,500' },
+    RESENCE2026: { discountPercent: 15, maxDiscountINR: 1000, minSpendINR: 2000, description: '15% Off (Max ₹1,000) on cart > ₹2,000' },
+    COFFEE100: { flatDiscountINR: 100, minSpendINR: 500, description: '₹100 Off on specialty coffee > ₹500' },
+    FIT10: { discountPercent: 10, minSpendINR: 1500, description: '10% Off on wellness & protein > ₹1,500' },
+    DESK200: { flatDiscountINR: 200, minSpendINR: 1000, description: '₹200 Off on desk accessories > ₹1,000' },
+    PREMIUM10: { discountPercent: 10, maxDiscountINR: 2500, minSpendINR: 5000, description: '10% Off on premium electronics > ₹5,000' },
+    TRAVEL15: { discountPercent: 15, maxDiscountINR: 1500, minSpendINR: 3000, description: '15% Off on travel bags > ₹3,000' },
+    EARBUD20: { discountPercent: 20, maxDiscountINR: 800, minSpendINR: 2000, description: '20% Off on true wireless earbuds' },
+    SAAS15: { discountPercent: 15, minSpendINR: 5000, description: '15% Off on annual software licenses' },
+};
+/**
+ * DemoCatalogProvider
+ * In-memory zero-configuration reference implementation for testing, demos, and local development.
+ */
+class DemoCatalogProvider {
+    async searchProducts(query, filters = {}) {
+        const rawQ = (query || '').toLowerCase().trim();
+        // If query is empty or wildcard, return all matching products based on filters
+        if (!rawQ) {
+            return exports.MERCHANT_CATALOG.filter((p) => {
+                const matchesCategory = !filters.category || p.category.toLowerCase() === filters.category.toLowerCase();
+                const matchesPrice = !filters.maxPrice || p.price <= filters.maxPrice;
+                const matchesRating = !filters.minRating || p.rating >= filters.minRating;
+                return matchesCategory && matchesPrice && matchesRating;
+            });
+        }
+        const stopWords = new Set(['a', 'an', 'the', 'in', 'for', 'with', 'to', 'me', 'of', 'at', 'on', 'under', 'below', 'buy', 'order', 'get', 'find', 'please', 'want', 'some', 'any', 'good', 'best', 'need', 'i', 'would', 'like', 'show', 'less', 'than']);
+        const tokens = rawQ
+            .replace(/[^a-z0-9\s-]/g, ' ')
+            .split(/\s+/)
+            .map((t) => t.trim())
+            .filter((t) => t.length > 0 && !stopWords.has(t) && !/^\d+$/.test(t));
+        let targetEntity = null;
+        const isMouseQuery = tokens.includes('mouse') && !tokens.includes('mat') && !tokens.includes('pad');
+        const isLaptopQuery = tokens.includes('laptop') && !tokens.includes('stand') && !tokens.includes('bag') && !tokens.includes('riser');
+        const isSpeakerQuery = tokens.includes('speaker') || tokens.includes('speakers');
+        const isTshirtQuery = tokens.includes('tshirt') || tokens.includes('shirt') || rawQ.includes('t-shirt');
+        const isShoesQuery = tokens.includes('shoes') || tokens.includes('shoe') || tokens.includes('sneakers');
+        const isWalletQuery = tokens.includes('wallet');
+        const isBackpackQuery = (tokens.includes('backpack') || tokens.includes('bag')) && !isLaptopQuery;
+        const isCoffeeQuery = (tokens.includes('coffee') || tokens.includes('roast') || tokens.includes('beans')) && !tokens.includes('grinder') && !tokens.includes('kettle');
+        const isHeadphonesQuery = tokens.includes('headphones') || tokens.includes('headphone');
+        const isEarbudsQuery = tokens.includes('earbuds') || tokens.includes('earbud');
+        const isKeyboardQuery = tokens.includes('keyboard');
+        const isWatchQuery = tokens.includes('watch');
+        const isProteinQuery = tokens.includes('protein') || tokens.includes('whey');
+        if (isMouseQuery)
+            targetEntity = 'mouse';
+        else if (isLaptopQuery)
+            targetEntity = 'laptop';
+        else if (isSpeakerQuery)
+            targetEntity = 'speaker';
+        else if (isTshirtQuery)
+            targetEntity = 'tshirt';
+        else if (isShoesQuery)
+            targetEntity = 'shoes';
+        else if (isWalletQuery)
+            targetEntity = 'wallet';
+        else if (isBackpackQuery)
+            targetEntity = 'backpack';
+        else if (isCoffeeQuery)
+            targetEntity = 'coffee';
+        else if (isHeadphonesQuery)
+            targetEntity = 'headphones';
+        else if (isEarbudsQuery)
+            targetEntity = 'earbuds';
+        else if (isKeyboardQuery)
+            targetEntity = 'keyboard';
+        else if (isWatchQuery)
+            targetEntity = 'watch';
+        else if (isProteinQuery)
+            targetEntity = 'protein';
+        const scored = exports.MERCHANT_CATALOG.map((p) => {
+            let score = 0;
+            const pNameLower = p.name.toLowerCase();
+            const pDescLower = p.description.toLowerCase();
+            const pCatLower = p.category.toLowerCase();
+            const pTagsLower = p.tags.map((t) => t.toLowerCase());
+            if (targetEntity) {
+                let isEntityMatch = false;
+                if (targetEntity === 'mouse') {
+                    isEntityMatch = pTagsLower.includes('mouse') && !pTagsLower.includes('desk mat') && !pTagsLower.includes('mat');
+                }
+                else if (targetEntity === 'laptop') {
+                    isEntityMatch = pTagsLower.includes('laptop') && !pTagsLower.includes('laptop stand') && !pTagsLower.includes('stand') && !pTagsLower.includes('bag');
+                }
+                else if (targetEntity === 'speaker') {
+                    isEntityMatch = pTagsLower.includes('speaker');
+                }
+                else if (targetEntity === 'tshirt') {
+                    isEntityMatch = pTagsLower.includes('tshirt') || pTagsLower.includes('t-shirt') || pTagsLower.includes('shirt');
+                }
+                else if (targetEntity === 'shoes') {
+                    isEntityMatch = pTagsLower.includes('shoes') || pTagsLower.includes('footwear') || pTagsLower.includes('sneakers');
+                }
+                else if (targetEntity === 'wallet') {
+                    isEntityMatch = pTagsLower.includes('wallet');
+                }
+                else if (targetEntity === 'backpack') {
+                    isEntityMatch = pTagsLower.includes('backpack') || pTagsLower.includes('bag');
+                }
+                else if (targetEntity === 'coffee') {
+                    isEntityMatch = pTagsLower.includes('coffee') || pTagsLower.includes('roast') || pTagsLower.includes('beans');
+                }
+                else if (targetEntity === 'headphones') {
+                    isEntityMatch = pTagsLower.includes('headphones') || pTagsLower.includes('headphone');
+                }
+                else if (targetEntity === 'earbuds') {
+                    isEntityMatch = pTagsLower.includes('earbuds') || pTagsLower.includes('earbud');
+                }
+                else if (targetEntity === 'keyboard') {
+                    isEntityMatch = pTagsLower.includes('keyboard');
+                }
+                else if (targetEntity === 'watch') {
+                    isEntityMatch = pTagsLower.includes('watch') || pTagsLower.includes('smartwatch');
+                }
+                else if (targetEntity === 'protein') {
+                    isEntityMatch = pTagsLower.includes('protein') || pTagsLower.includes('whey');
+                }
+                if (!isEntityMatch) {
+                    return { product: p, score: 0, matches: false };
+                }
+            }
+            if (tokens.length === 0) {
+                score = 10;
+            }
+            else {
+                if (rawQ && (pNameLower.includes(rawQ) || pTagsLower.some((t) => t.includes(rawQ)))) {
+                    score += 120;
+                }
+                for (const token of tokens) {
+                    const singular = token.endsWith('s') && token.length > 3 ? token.slice(0, -1) : token;
+                    const plural = token + 's';
+                    if (pTagsLower.includes(token) || pTagsLower.includes(singular) || pTagsLower.includes(plural)) {
+                        score += 100;
+                    }
+                    else if (pNameLower.split(/[\s-]+/).includes(token) || pNameLower.split(/[\s-]+/).includes(singular)) {
+                        score += 80;
+                    }
+                    else if (pCatLower.includes(token) || pCatLower.includes(singular)) {
+                        score += 60;
+                    }
+                    else if (pNameLower.includes(token) || pNameLower.includes(singular)) {
+                        score += 40;
+                    }
+                    else if (pTagsLower.some((t) => t.includes(token) || token.includes(t))) {
+                        score += 25;
+                    }
+                    else if (pDescLower.includes(token) || pDescLower.includes(singular)) {
+                        score += 15;
+                    }
+                }
+            }
+            const matchesCategory = !filters.category || p.category.toLowerCase() === filters.category.toLowerCase();
+            const matchesPrice = !filters.maxPrice || p.price <= filters.maxPrice;
+            const matchesRating = !filters.minRating || p.rating >= filters.minRating;
+            const isConfident = score >= 40;
+            return { product: p, score, matches: isConfident && matchesCategory && matchesPrice && matchesRating };
+        });
+        return scored
+            .filter((s) => s.matches)
+            .sort((a, b) => b.score - a.score)
+            .map((s) => s.product);
+    }
+    async getProductDetails(productId) {
+        const item = exports.MERCHANT_CATALOG.find((p) => p.id === productId);
+        return item || null;
+    }
+    getProviderName() {
+        return 'Demo In-Memory Catalog (Sample Data)';
+    }
+}
+exports.DemoCatalogProvider = DemoCatalogProvider;
+exports.globalDemoCatalogProvider = new DemoCatalogProvider();
+//# sourceMappingURL=catalog-data.js.map

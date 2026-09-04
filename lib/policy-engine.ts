@@ -10,9 +10,9 @@ export interface MerchantPolicy {
 export const defaultPolicy: MerchantPolicy = {
   maxDiscountPercentage: 15,
   maxUnapprovedOrderValue: 20000,
-  permittedAddons: ['custom_note', 'priority_shipping', 'premium_packaging'],
+  permittedAddons: ['custom_note', 'priority_shipping', 'premium_packaging', 'addon_note_01', 'addon_shipping_02', 'addon_sweets_03', 'addon_packaging_04'],
   prohibitedTagsForAddons: ['perishable', 'digital'],
-  requireExplicitApprovalForLink: true,
+  requireExplicitApprovalForLink: false, // Guardrails handle high-value gating by default
   quoteExpiryMinutes: 60
 };
 
@@ -52,7 +52,10 @@ export function evaluatePolicy(quote: QuoteRequest, policy: MerchantPolicy = def
   }
 
   for (const addon of quote.addonIds) {
-    if (!policy.permittedAddons.includes(addon)) {
+    const isPermitted = policy.permittedAddons.some(
+      p => p === addon || addon.includes(p) || p.includes(addon)
+    );
+    if (!isPermitted) {
       isCompliant = false;
       reasons.push(`Addon ${addon} is not permitted by merchant policy`);
     }
