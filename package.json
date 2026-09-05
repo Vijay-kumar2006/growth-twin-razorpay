@@ -19,10 +19,11 @@
     "dev": "next dev",
     "start": "next start",
     "lint": "next lint",
-    "test": "npm run test:core && npm run test:mcp && npm run test:razoragent",
+    "test": "npm run test:core && npm run test:mcp && npm run test:razoragent && npm run test:eval",
     "test:core": "tsx scripts/test-core.ts",
     "test:razoragent": "tsx scripts/test-razoragent.ts",
-    "test:mcp": "tsx scripts/test-mcp-direct.ts"
+    "test:mcp": "tsx scripts/test-mcp-direct.ts",
+    "test:eval": "tsx scripts/test-eval.ts"
   },
   "keywords": [
     "resence",
@@ -36,11 +37,11 @@
     "guardrails",
     "idempotency"
   ],
-  "author": "Piyush Singh (Resence) <th.piyushsingh2007@gmail.com>",
+  "author": "Vijay Kumar",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Piyush-Thakur7/razoragent.git"
+    "url": "https://github.com/Vijay-kumar2006/growth-twin-razorpay.git"
   },
   "dependencies": {},
   "devDependencies": {

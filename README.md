@@ -1,6 +1,8 @@
 # Growth Twin for Razorpay
 
-**Growth Twin for Razorpay** is an original AI Growth & Agentic Commerce platform that makes merchants readable and transactable by autonomous AI buyers while enforcing deterministic revenue guardrails, safe negotiation constraint trade-offs, approval gating, and cryptographic idempotency.
+**Built by:** Vijay Kumar ([@Vijay-kumar2006](https://github.com/Vijay-kumar2006))
+
+> Growth Twin is a merchant-controlled AI commerce agent that creates explainable revenue opportunities, safely negotiates conflicting buyer constraints, and recovers failed payment attempts without unauthorized spending or duplicate orders.
 
 > **Core Philosophy:** *"The model recommends; deterministic policy code authorizes."*
 
@@ -8,7 +10,29 @@
 
 ## ⚡ 30-Second Pitch
 
-> "Autonomous AI buyers are already shopping online, but merchants have no trust layer to protect their margins, resolve constraint conflicts, or approve high-value quotes. **Growth Twin** acts as an AI revenue co-pilot for merchants. It converts unstructured buyer requests into structured quotes, recommends margin-accretive add-ons based on transparent scoring, runs a **Constraint Trade-off Simulator (Safe Negotiation Mode)** to resolve impossible requests without relaxing dietary or religious rules, deterministically enforces discount caps, blocks unapproved payments server-side, and guarantees idempotent settlement over Razorpay without duplicate orders or revenue leakage."
+> "Autonomous AI buyers are already shopping online, but merchants have no trust layer to protect their margins, resolve constraint conflicts, or approve high-value quotes. **Growth Twin** acts as an AI revenue co-pilot for merchants. It converts unstructured buyer requests into structured quotes, recommends margin-accretive add-ons based on transparent scoring, runs a **Constraint Trade-off Simulator (Safe Negotiation Mode)** to resolve impossible requests without relaxing dietary or religious rules, deterministically enforces discount caps, blocks unapproved payments server-side, and enforces idempotent payment-action simulation, with a drop-in Razorpay test-mode adapter without duplicate orders or revenue leakage."
+
+---
+
+## 🌟 Original Growth Twin Contributions
+
+Authored and implemented for this project by **Vijay Kumar**:
+
+1. **Revenue-aware add-on scoring (`lib/revenue-bundle.ts`)**:
+   - Transparent, deterministic 100-point formula evaluating Budget Headroom (40 pts) + Preference Match (30 pts) + SKU Compatibility (10 pts) + Merchant Priority/Inventory (20 pts).
+2. **Deterministic merchant policy engine (`lib/policy-engine.ts`)**:
+   - Strict server-side enforcement of maximum discount caps (15%), unapproved order ceilings (₹20,000), permitted add-on whitelists, and tag prohibitions.
+3. **Constraint Trade-off Simulator / Safe Negotiation Mode (`lib/revenue-bundle.ts`, `simulate_constraint_tradeoffs`)**:
+   - Generates 2–3 structured alternatives (Option A: Budget-Strict, Option B: Premium with explicit approval, Option C: Count-Optimized) when intent conflicts arise.
+   - **Zero Hallucination Invariant**: Never relaxes hard constraints (e.g. Jain, vegan, dietary, religious specifications).
+4. **Adaptive Payment Recovery Agent (`lib/revenue-bundle.ts`, `recover_failed_payment`)**:
+   - Intercepts checkout and gateway failures and generates 3 constraint-preserving recovery routes (alternate rail retry, lowest add-on pruning, shipping downgrade) with quote versioning.
+5. **11-tool MCP Growth Twin layer (`lib/razoragent/mcp-engine.ts`, `/api/razoragent/mcp`)**:
+   - Standardized JSON-RPC 2.0 interface exposing both core commerce and Growth Twin tools (`recommend_addons`, `evaluate_merchant_growth_policy`, `simulate_constraint_tradeoffs`, `recover_failed_payment`, `get_commerce_contract`).
+6. **Synthetic Evaluation Lab with Level 2 and Level 3 testing (`lib/eval/*`, UI dashboard, API)**:
+   - Seedable PRNG, 8 Level 2 MCP scenarios, 10 Level 3 adversarial attack vector defenses, and paired Counterfactual A/B Simulator comparing Control A against Treatment B.
+7. **Audit trail, quote versioning, approval gates, and idempotency behavior (`lib/audit-logger.ts`, `lib/razorpay-adapter.ts`)**:
+   - Append-only immutable lifecycle ledger, SHA-256 idempotency locks (`quoteId + version`), deterministic mock simulation default, and drop-in Razorpay test API support.
 
 ---
 
@@ -53,35 +77,6 @@
 |  - Append-Only Audit Ledger: Immutable lifecycle event log                  |
 +-----------------------------------------------------------------------------+
 ```
-
----
-
-## 🌟 Original Contributions
-
-1. **Adaptive Payment Recovery / Revenue Recovery Agent (`lib/revenue-bundle.ts`, `recover_failed_transaction`)**:
-   - Deterministically detects checkout and banking gateway failures and rescues transactions.
-   - Generates 2–3 structured recovery routes: (1) Instant UPI rail retry on same quote, (2) Prune lowest-priority optional add-on, (3) Downgrade optional courier SKU.
-   - **Hard Constraint Invariance**: Preserves 100% of hard constraints (dietary, religious, specifications).
-   - Re-runs server-side policy engine, creates a new quote version upon cart alterations, preserves idempotency, and prevents duplicate orders.
-   - Logs audit events: `PAYMENT_FAILURE_DETECTED`, `RECOVERY_OPTIONS_GENERATED`, and `RECOVERY_OPTION_SELECTED`.
-2. **Constraint Trade-off Simulator (Safe Negotiation Mode, `lib/revenue-bundle.ts`, `simulate_constraint_tradeoffs`)**:
-   - Deterministic mathematical negotiation when budget, quantity, and preferences conflict.
-   - Generates 2-3 structured options: (Option A: Budget-Strict, Option B: Uncompromised Premium with approval, Option C: Optimized Count).
-   - **Zero Hallucination Rule**: Never relaxes hard constraints (dietary, safety, religious). Only negotiable soft preferences (packaging, courier) may be relaxed.
-3. **Merchant Policy Panel & Server-Side Enforcement (`lib/policy-engine.ts`)**:
-   - Hard mathematical bounds on max automatic discounts (15%), order ceilings (₹20,000), permitted add-ons, and prohibited product tags.
-   - Bypassing frontend UI requests directly to `create_guarded_order` fails safely with `HUMAN_APPROVAL_REQUIRED`.
-4. **Transparent Revenue-Aware Bundle Engine (`lib/revenue-bundle.ts`)**:
-   - Zero black-box AI or hallucinated prices.
-   - Deterministic 100-point formula: Budget Headroom (40 pts) + Buyer Relevance (30 pts) + Compatibility (10 pts) + Merchant Priority/Inventory (20 pts).
-5. **11-Tool MCP JSON-RPC 2.0 Server Endpoint (`lib/razoragent/mcp-engine.ts`)**:
-   - Added original Growth Twin tools: `recover_failed_transaction`, `simulate_constraint_tradeoffs`, `recommend_addons`, `evaluate_merchant_growth_policy`, and `get_commerce_contract`.
-   - Inherited 6 tools: `search_products`, `get_product_details`, `calculate_cart_quote`, `evaluate_spend_policy`, `create_guarded_order`, and `verify_payment_and_settle`.
-6. **Pluggable Razorpay Adapter with Safe Mock Default (`lib/razorpay-adapter.ts`)**:
-   - Always runs safely out of the box with zero credentials required.
-   - Seamless drop-in support for live test-mode credentials (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`) without code changes.
-7. **Append-Only Audit Ledger (`lib/audit-logger.ts`)**:
-   - Immutable log capturing the full lifecycle for merchants and compliance officers.
 
 ---
 
@@ -138,14 +133,14 @@ Follow this step-by-step flow for judging and live evaluation:
 ### 6. Adaptive Payment Recovery & Safe Idempotent Retry (3:15 - 3:45)
 - Click **Simulate Payment Failure** (simulating bank/card drop).
 - Status moves to **`PAYMENT_FAILED`**.
-- The **Adaptive Payment Recovery Agent** (`recover_failed_transaction`) engages:
+- The **Adaptive Payment Recovery Agent** (`recover_failed_payment`) engages:
   - Generates 3 deterministic recovery routes (UPI rail retry, lowest add-on pruning, surface shipping downgrade).
   - Preserves 100% of hard constraints.
 - Selecting a recovery route creates a new quote version with `AWAITING_APPROVAL` and derives an idempotency key to prevent duplicate orders.
 
-### 7. Append-Only Audit Ledger & MCP Inspection (3:45 - 4:00)
-- Switch to the **Audit Ledger** tab to inspect all chronological events (`INTENT_RECEIVED` → `CONSTRAINT_CONFLICT_DETECTED` → `TRADEOFF_ALTERNATIVE_SELECTED` → `POLICY_CHECK` → `APPROVAL_GRANTED` → `PAYMENT_SUCCESS` → `PAYMENT_FAILURE_DETECTED` → `RECOVERY_OPTIONS_GENERATED` → `RECOVERY_OPTION_SELECTED`).
-- Query the `/api/razoragent/mcp` endpoint to view all 11 tools and the raw agent-readable commerce contract.
+### 7. Evaluation Lab & Audit Ledger (3:45 - 4:00)
+- Switch to the **Evaluation Lab** tab to inspect seed controllers, 8 Level 2 scenarios, 10 Level 3 adversarial vectors, and the counterfactual A/B simulator.
+- Switch to the **Audit Ledger** tab to inspect all chronological lifecycle events.
 
 ---
 
@@ -162,7 +157,7 @@ npm install
 ```bash
 npm test
 ```
-*Runs `test:core` (policy, revenue, trade-off, and recovery tests), `test:mcp` (11-tool MCP discovery & execution test), and `test:razoragent` (concurrency & benchmark suite).*
+*Runs `test:core` (policy, revenue, trade-off, and recovery tests), `test:mcp` (11-tool MCP discovery & execution test), `test:razoragent` (concurrency & benchmark suite), and `test:eval` (Evaluation Lab suite).*
 
 ### 3. Run Production Build
 ```bash
@@ -177,14 +172,11 @@ Open [http://localhost:3000](http://localhost:3000) to view the Growth Twin inte
 
 ---
 
-## 📖 Built on Open Source
+## 📖 Foundation and Notices
 
-This project builds upon and integrates ideas from the open-source community:
-- **[RazorAgent](https://github.com/Piyush-Thakur7/razoragent)** (MIT): Base Next.js/TypeScript architecture, MCP tools, and catalog foundations.
-- **[Safe-Cart-AI](https://github.com/Jai-095/safe-cart-ai)**: Concepts for deterministic merchant policy boundaries and approval gating.
-- **[Razorpay MCP Server](https://github.com/razorpay/razorpay-mcp-server)**: Reference for Razorpay API/tool schemas.
+> Growth Twin includes adapted and reused open-source commerce infrastructure. Required license and attribution notices are preserved in `THIRD-PARTY-NOTICES.md`. The original Growth Twin features and product integration are authored for this project by Vijay Kumar.
 
-See [ORIGINAL_WORK.md](./ORIGINAL_WORK.md) for full details on attributions and original contributions.
+See [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md) for complete attribution and license details.
 
 ---
 

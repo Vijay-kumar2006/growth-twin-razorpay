@@ -1,6 +1,6 @@
-# Contributing to RazorAgent
+# Contributing to Growth Twin for Razorpay
 
-Thank you for your interest in contributing to **RazorAgent by Resence** — the Bounded Model Context Protocol (MCP) Commerce & Settlement Gateway for Autonomous AI Buyers.
+Thank you for your interest in contributing to **Growth Twin for Razorpay** — the Bounded Agentic Revenue & Commerce Gateway for Autonomous AI Buyers.
 
 ---
 
@@ -13,8 +13,8 @@ Thank you for your interest in contributing to **RazorAgent by Resence** — the
 
 ### Clone & Install
 ```bash
-git clone https://github.com/Piyush-Thakur7/razoragent.git
-cd razoragent
+git clone https://github.com/Vijay-kumar2006/growth-twin-razorpay.git
+cd growth-twin-razorpay
 
 # Install dependencies
 npm install
@@ -22,43 +22,49 @@ npm install
 # Start Next.js Development Server
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the live Agent Terminal and Merchant Console.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the live Agent Terminal, Merchant Policy Panel, and Evaluation Lab.
 
 ---
 
 ## 🧪 2. Running Automated Tests
 
-Before submitting any code changes, ensure all fintech and MCP test suites pass with 100% assertions:
+Before submitting any pull request or code changes, ensure all verification and evaluation test suites pass with 100% invariant compliance:
 
 ```bash
-# Run core fintech verification suite (Happy Path, Budget Guardrails, Idempotency, HMAC Webhooks)
-npm run test:razoragent
+# Run full comprehensive test suite (Core + MCP + Gateway + Evaluation Lab)
+npm test
 
-# Run direct MCP JSON-RPC 2.0 protocol tests
-npm run test:mcp
+# Run individual test suites
+npm run test:core        # Tests revenue bundle scoring, policy engine, and trade-offs
+npm run test:mcp         # Tests 11-tool MCP discovery and JSON-RPC execution
+npm run test:razoragent  # Tests gateway idempotency, concurrency, and HMAC signatures
+npm run test:eval        # Tests Evaluation Lab (PRNG, L2 scenarios, L3 adversarial, A/B simulator)
 
-# Build the distributable TypeScript SDK package into dist/
-npm run build:package
+# Verify production build
+npm run build
 ```
 
 ---
 
 ## 🏛️ 3. Architecture & Codebase Layout
 
-* `lib/razoragent/`: Core MCP gateway, deterministic guardrails, SHA-256 idempotency locks, Razorpay adapter, and catalog data.
-* `bin/cli.js`: Standalone executable command-line interface (`npx razoragent`).
-* `app/`: Next.js Web App routes and API route handlers (`/api/razoragent/mcp`).
-* `components/razoragent/`: UI Mission Control Dashboard, AI Buyer Terminal, Policy Inspector, and Webhook Stream.
-* `dist/`: Compiled CommonJS and `.d.ts` type definitions for the public NPM library.
+* `lib/revenue-bundle.ts`: Revenue-aware add-on engine, Constraint Trade-off Simulator (Safe Negotiation Mode), and Adaptive Payment Recovery agent.
+* `lib/policy-engine.ts`: Deterministic merchant policy engine (discount caps, unapproved order ceilings, tag prohibitions).
+* `lib/razorpay-adapter.ts`: Pluggable Razorpay adapter (default Deterministic Mock Mode + live test API fallback).
+* `lib/audit-logger.ts`: Append-only event store capturing immutable lifecycle timelines.
+* `lib/eval/`: Synthetic Evaluation Lab (Mulberry32 PRNG, Level 2 scenarios, Level 3 adversarial matrix, Counterfactual A/B simulator).
+* `lib/razoragent/`: MCP server engine (11 tools), SHA-256 idempotency manager, catalog providers, and types.
+* `app/`: Next.js Web App routes and API route handlers (`/api/razoragent/mcp`, `/api/razoragent/eval`).
+* `components/razoragent/`: UI Mission Control Dashboard, AI Buyer Terminal, Policy Inspector, Evaluation Lab, and Audit Ledger.
 
 ---
 
 ## 📋 4. Coding Standards & Guidelines
 
-1. **Deterministic Guardrails**: Financial limit checks must never depend on non-deterministic LLM output. Always enforce mathematical limits in `guardrails.ts`.
-2. **Zero-Dependency SDK**: The published runtime NPM package (`razoragent`) must remain zero-dependency. All UI frameworks (Next.js, React, Tailwind) belong in `devDependencies`.
-3. **Cryptographic Integrity**: All webhook events and settlement signatures must use HMAC-SHA256 verification.
-4. **Idempotency**: All payment-adjacent operations must utilize the SHA-256 idempotency latch to prevent concurrency retries.
+1. **Deterministic Guardrails**: Financial limits, discount caps, and hard constraints (e.g. Jain, dietary, religious) must never depend on non-deterministic LLM output. Always enforce mathematical invariants in policy and trade-off code.
+2. **Zero-Hallucination Pricing**: Product prices and add-on calculations must always be grounded in catalog data.
+3. **Cryptographic Integrity & Idempotency**: All webhook events and settlement signatures must use HMAC-SHA256 verification. Idempotency keys must lock `quoteId + version` to prevent duplicate orders.
+4. **Synthetic Evaluation Isolation**: All evaluation test suites must run deterministically using seedable PRNGs with zero dependency on external network services.
 
 ---
 
@@ -70,12 +76,12 @@ npm run build:package
    ```
 2. Commit your changes with clear, descriptive commit messages:
    ```bash
-   git commit -m "feat(mcp): add support for multi-currency settlement"
+   git commit -m "feat(recovery): add alternate UPI path heuristic"
    ```
 3. Push to your branch and open a Pull Request against `main`.
-4. Ensure the GitHub Actions CI workflow passes on your PR.
+4. Ensure all automated tests (`npm test`) and builds (`npm run build`) pass cleanly.
 
 ---
 
-## 📄 License
-By contributing to RazorAgent, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+## 📄 License & Attribution
+By contributing to Growth Twin for Razorpay, you agree that your contributions will be licensed under the project's [MIT License](LICENSE). Third-party open-source attributions and notices are documented in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

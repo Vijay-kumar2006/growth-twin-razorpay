@@ -1,16 +1,19 @@
-# Original Work and Attributions
+# Original Work & Attribution Pointer
 
-This repository, **Growth Twin for Razorpay**, was built as an original, working AI Growth & Agentic Commerce hackathon project. It is built upon the following open-source foundations:
+**Growth Twin for Razorpay** was created and built by **Vijay Kumar** as an original AI Growth & Agentic Commerce platform.
 
-## Foundations
-1. **[RazorAgent](https://github.com/Piyush-Thakur7/razoragent)**: Used as the primary TypeScript/Next.js foundation for catalog, MCP, and UI architecture.
-2. **[Safe-Cart-AI](https://github.com/Jai-095/safe-cart-ai)**: Inspired the deterministic policy boundaries and merchant approval gating concepts (translated from Python to TypeScript).
-3. **[Razorpay MCP Server](https://github.com/razorpay/razorpay-mcp-server)**: Referenced for Razorpay API/tool object definitions.
+## Foundations & Third-Party Notices
+This repository includes adapted and reused open-source commerce infrastructure (including RazorAgent, with concepts from Safe-Cart-AI and schema references from Razorpay MCP Server).
 
-## Original Contributions
-- **Deterministic Mock Razorpay Adapter**: Created `lib/razorpay-adapter.ts` for safe test simulation, ensuring real API keys are not required during demo flows. Includes simulated failure and recovery.
-- **Merchant Policy Engine**: Created `lib/policy-engine.ts` to deterministically block unapproved AI intents, enforce maximum discounts, and restrict unauthorized add-ons.
-- **Revenue-Aware Bundle Engine**: Created `lib/revenue-bundle.ts` to transparently score and suggest add-ons based on budget headroom, compatibility, and merchant priority without relying on black-box AI logic (XGBoost removed).
-- **Append-Only Audit Ledger**: Created `lib/audit-logger.ts` to trace all intent handling, policy evaluations, and payment state transitions.
+For complete attribution details, copyright notices, and upstream MIT license texts, please refer to:
+👉 **[THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)**
 
-*Built on open source.*
+## Summary of Original Growth Twin Contributions
+The core revenue intelligence, policy, recovery, and evaluation features were authored originally for this project by **Vijay Kumar**:
+1. **Revenue-Aware Add-on Scoring Engine** (`lib/revenue-bundle.ts`)
+2. **Deterministic Merchant Policy Engine** (`lib/policy-engine.ts`)
+3. **Constraint Trade-off Simulator / Safe Negotiation Mode** (`lib/revenue-bundle.ts`)
+4. **Adaptive Payment Recovery Agent** (`lib/revenue-bundle.ts`)
+5. **11-Tool Growth Twin MCP Interface** (`lib/razoragent/mcp-engine.ts`)
+6. **Synthetic Evaluation Lab Suite** (`lib/eval/*`)
+7. **Append-Only Audit Ledger & Pluggable Adapter** (`lib/audit-logger.ts`, `lib/razorpay-adapter.ts`)
