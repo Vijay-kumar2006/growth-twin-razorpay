@@ -35,7 +35,7 @@ import { handleMCPRequest } from 'razoragent';
 
 export async function POST(req: Request) {
   const jsonRpcBody = await req.json();
-  
+
   // 1. Dispatch MCP JSON-RPC with merchant guardrails
   const response = await handleMCPRequest(jsonRpcBody, {
     maxSpendLimitINR: 5000,
@@ -151,39 +151,39 @@ Generated via RazorAgent by Resence © 2026 Piyush Singh.`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in font-sans">
-      <div className="bg-[#0B0F19] border border-slate-700 rounded-3xl w-full max-w-2xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in font-sans">
+      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+
         {/* Header */}
-        <div className="px-6 py-4 bg-[#0E1322] border-b border-slate-800 flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-[#0C8CE9]/20 text-[#3395FF]">
+            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">
               <Code2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">Merchant SDK & Installation Guide</h3>
-              <p className="text-xs text-slate-400">Step-by-step instructions to connect your store with Razorpay Agentic Commerce</p>
+              <h3 className="text-sm font-bold text-slate-900">Merchant SDK & Installation Guide</h3>
+              <p className="text-xs text-slate-500">Step-by-step instructions to connect your store with Razorpay Agentic Commerce</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+            className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Framework Selector & Download Strip */}
-        <div className="px-6 py-3 bg-[#080B14] border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
-          
+        <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+
           <div className="flex space-x-1">
             <button
               onClick={() => setActiveFramework('storefront')}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition ${
                 activeFramework === 'storefront'
-                  ? 'bg-[#121E33] text-[#3395FF] border border-[#0C8CE9]/40 font-bold'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Connect Store (CLI)
@@ -193,8 +193,8 @@ Generated via RazorAgent by Resence © 2026 Piyush Singh.`;
               onClick={() => setActiveFramework('nextjs')}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition ${
                 activeFramework === 'nextjs'
-                  ? 'bg-[#121E33] text-[#3395FF] border border-[#0C8CE9]/40 font-bold'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Next.js 14/15/16
@@ -204,8 +204,8 @@ Generated via RazorAgent by Resence © 2026 Piyush Singh.`;
               onClick={() => setActiveFramework('express')}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition ${
                 activeFramework === 'express'
-                  ? 'bg-[#121E33] text-[#3395FF] border border-[#0C8CE9]/40 font-bold'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Express / Node.js
@@ -215,8 +215,8 @@ Generated via RazorAgent by Resence © 2026 Piyush Singh.`;
               onClick={() => setActiveFramework('claude')}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition ${
                 activeFramework === 'claude'
-                  ? 'bg-[#121E33] text-[#3395FF] border border-[#0C8CE9]/40 font-bold'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Claude Desktop MCP
@@ -226,7 +226,7 @@ Generated via RazorAgent by Resence © 2026 Piyush Singh.`;
           {/* Download Button */}
           <button
             onClick={handleDownloadDocs}
-            className="px-3 py-1.5 rounded-lg bg-[#0C8CE9] hover:bg-[#0972BD] text-white text-xs font-bold font-sans flex items-center space-x-1.5 transition shadow-md shadow-[#0C8CE9]/20"
+            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold font-sans flex items-center space-x-1.5 transition shadow-sm"
           >
             {downloadSuccess ? (
               <>
@@ -244,24 +244,24 @@ Generated via RazorAgent by Resence © 2026 Piyush Singh.`;
         </div>
 
         {/* Body Content */}
-        <div className="p-6 overflow-y-auto space-y-5 text-xs text-slate-300">
-          
+        <div className="p-6 overflow-y-auto space-y-5 text-xs text-slate-700">
+
           {/* Step 1: Package install or Connect */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                <span className="w-5 h-5 rounded-full bg-[#0C8CE9] text-white flex items-center justify-center text-[10px]">1</span>
+              <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">1</span>
                 {activeFramework === 'storefront' ? 'Connect Real Shopify or WooCommerce Store' : 'Install Gateway Package'}
               </span>
               <button
                 onClick={() => copyCode('step1', activeFramework === 'storefront' ? 'npx razoragent connect' : 'npm install razoragent')}
-                className="text-slate-400 hover:text-white flex items-center gap-1 font-mono text-[11px]"
+                className="text-slate-500 hover:text-indigo-600 flex items-center gap-1 font-mono text-[11px]"
               >
-                {copiedSection === 'step1' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copiedSection === 'step1' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                 <span>Copy</span>
               </button>
             </div>
-            <pre className="p-3 rounded-xl bg-[#04060A] border border-slate-800 font-mono text-slate-200">
+            <pre className="p-3 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs">
               {activeFramework === 'storefront' ? STOREFRONT_CLI_SNIPPET : 'npm install razoragent'}
             </pre>
           </div>
@@ -269,8 +269,8 @@ Generated via RazorAgent by Resence © 2026 Piyush Singh.`;
           {/* Step 2: Code integration */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                <span className="w-5 h-5 rounded-full bg-[#0C8CE9] text-white flex items-center justify-center text-[10px]">2</span>
+              <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">2</span>
                 {activeFramework === 'storefront' && 'Check Live Gateway Status'}
                 {activeFramework === 'nextjs' && 'Expose MCP Route Handler (Next.js)'}
                 {activeFramework === 'express' && 'Mount MCP Endpoint (Express.js)'}
@@ -281,13 +281,13 @@ Generated via RazorAgent by Resence © 2026 Piyush Singh.`;
                   const code = activeFramework === 'storefront' ? 'npx razoragent status' : activeFramework === 'nextjs' ? NEXTJS_SNIPPET : activeFramework === 'express' ? EXPRESS_SNIPPET : CLAUDE_CONFIG_SNIPPET;
                   copyCode('activeCode', code);
                 }}
-                className="text-slate-400 hover:text-white flex items-center gap-1 font-mono text-[11px]"
+                className="text-slate-500 hover:text-indigo-600 flex items-center gap-1 font-mono text-[11px]"
               >
-                {copiedSection === 'activeCode' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copiedSection === 'activeCode' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                 <span>Copy</span>
               </button>
             </div>
-            <pre className="p-3 rounded-xl bg-[#04060A] border border-slate-800 font-mono text-[11px] text-slate-200 overflow-x-auto">
+            <pre className="p-3 rounded-xl bg-slate-900 text-slate-100 font-mono text-[11px] overflow-x-auto">
               {activeFramework === 'storefront' && 'npx razoragent status'}
               {activeFramework === 'nextjs' && NEXTJS_SNIPPET}
               {activeFramework === 'express' && EXPRESS_SNIPPET}
@@ -298,19 +298,19 @@ Generated via RazorAgent by Resence © 2026 Piyush Singh.`;
           {/* Step 3: Configure Razorpay Keys */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                <span className="w-5 h-5 rounded-full bg-[#0C8CE9] text-white flex items-center justify-center text-[10px]">3</span>
+              <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">3</span>
                 Add Razorpay Credentials (.env.local)
               </span>
               <button
                 onClick={() => copyCode('env', 'RAZORPAY_KEY_ID=rzp_test_xxx\nRAZORPAY_KEY_SECRET=your_secret_xxx')}
-                className="text-slate-400 hover:text-white flex items-center gap-1 font-mono text-[11px]"
+                className="text-slate-500 hover:text-indigo-600 flex items-center gap-1 font-mono text-[11px]"
               >
-                {copiedSection === 'env' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copiedSection === 'env' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                 <span>Copy</span>
               </button>
             </div>
-            <pre className="p-3 rounded-xl bg-[#04060A] border border-slate-800 font-mono text-[11px] text-slate-200 overflow-x-auto">
+            <pre className="p-3 rounded-xl bg-slate-900 text-slate-100 font-mono text-[11px] overflow-x-auto">
               RAZORPAY_KEY_ID=rzp_test_yourKeyId&#10;RAZORPAY_KEY_SECRET=yourKeySecret
             </pre>
           </div>
@@ -318,15 +318,15 @@ Generated via RazorAgent by Resence © 2026 Piyush Singh.`;
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 bg-[#0E1322] border-t border-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-1 text-[11px] font-mono text-slate-400">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#3395FF]" />
+        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          <div className="flex items-center space-x-1 text-[11px] font-mono text-slate-600">
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
             <span>Deterministic SHA-256 Idempotency Enabled</span>
           </div>
 
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
+            className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition"
           >
             Close
           </button>

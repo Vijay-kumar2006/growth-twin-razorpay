@@ -19,24 +19,24 @@ export default function BenchmarkModal({ isOpen, onClose, results, isLoading, on
   const totalCount = results ? results.length : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#0B0F19] border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in font-sans">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+
         {/* Header */}
-        <div className="px-5 py-4 bg-[#0E1322] border-b border-slate-800 flex items-center justify-between">
+        <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-lg bg-[#0C8CE9]/20 text-[#3395FF]">
+            <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white tracking-wide">Automated System Benchmarks</h3>
-              <p className="text-[11px] text-slate-400">Verifying Guardrails, Idempotency Locks & Razorpay APIs</p>
+              <h3 className="text-sm font-bold text-slate-900 tracking-wide">Automated System Benchmarks</h3>
+              <p className="text-[11px] text-slate-500">Verifying Guardrails, Idempotency Locks & Razorpay APIs</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition"
+            className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition"
           >
             <X className="w-4 h-4" />
           </button>
@@ -44,27 +44,27 @@ export default function BenchmarkModal({ isOpen, onClose, results, isLoading, on
 
         {/* Content */}
         <div className="p-5 overflow-y-auto space-y-3 font-mono text-xs flex-1">
-          
+
           {isLoading && (
-            <div className="py-12 flex flex-col items-center justify-center text-slate-400 space-y-3">
-              <div className="w-8 h-8 rounded-full border-2 border-[#3395FF] border-t-transparent animate-spin"></div>
-              <p className="font-sans text-sm font-medium text-slate-300">Running 5 Automated Test Suites...</p>
+            <div className="py-12 flex flex-col items-center justify-center text-slate-500 space-y-3">
+              <div className="w-8 h-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin"></div>
+              <p className="font-sans text-sm font-medium text-slate-700">Running 5 Automated Test Suites...</p>
             </div>
           )}
 
           {!isLoading && results && (
             <>
               {/* Scorecard */}
-              <div className="p-3.5 rounded-xl bg-[#121A2C] border border-[#0C8CE9]/40 flex items-center justify-between">
+              <div className="p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-200 flex items-center justify-between">
                 <div>
-                  <span className="text-slate-400 text-xs font-sans">Verification Score:</span>
-                  <div className="text-xl font-bold text-white mt-0.5">
-                    <span className="text-emerald-400">{passedCount}</span> / {totalCount} Test Suites Passed
+                  <span className="text-slate-500 text-xs font-sans">Verification Score:</span>
+                  <div className="text-xl font-bold text-slate-900 mt-0.5">
+                    <span className="text-emerald-700">{passedCount}</span> / {totalCount} Test Suites Passed
                   </div>
                 </div>
                 <button
                   onClick={onRerun}
-                  className="px-3 py-1.5 rounded-lg bg-[#0C8CE9] hover:bg-[#0972BD] text-white text-xs font-sans font-semibold transition"
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-sans font-semibold shadow-sm transition"
                 >
                   Re-run All
                 </button>
@@ -77,19 +77,19 @@ export default function BenchmarkModal({ isOpen, onClose, results, isLoading, on
                     key={test.testId}
                     className={`p-3 rounded-xl border ${
                       test.status === 'PASSED'
-                        ? 'bg-emerald-950/20 border-emerald-900/50 text-slate-200'
-                        : 'bg-rose-950/20 border-rose-900/50 text-slate-200'
+                        ? 'bg-emerald-50/60 border-emerald-200 text-slate-800'
+                        : 'bg-rose-50/60 border-rose-200 text-slate-800'
                     }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-2">
                         {test.status === 'PASSED' ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                         ) : (
-                          <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                          <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
                         )}
-                        <span className="font-bold text-xs text-white">{test.name}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                        <span className="font-bold text-xs text-slate-900">{test.name}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-white text-slate-600 border border-slate-200 font-mono shadow-sm">
                           {test.category}
                         </span>
                       </div>
@@ -98,9 +98,9 @@ export default function BenchmarkModal({ isOpen, onClose, results, isLoading, on
                       </span>
                     </div>
 
-                    <div className="mt-2 space-y-1 text-[11px] text-slate-400 pl-6">
-                      <p><strong className="text-slate-300">Expected:</strong> {test.expected}</p>
-                      <p><strong className="text-slate-300">Actual:</strong> {test.actual}</p>
+                    <div className="mt-2 space-y-1 text-[11px] text-slate-600 pl-6">
+                      <p><strong className="text-slate-800">Expected:</strong> {test.expected}</p>
+                      <p><strong className="text-slate-800">Actual:</strong> {test.actual}</p>
                     </div>
                   </div>
                 ))}
@@ -111,10 +111,10 @@ export default function BenchmarkModal({ isOpen, onClose, results, isLoading, on
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 bg-[#0E1322] border-t border-slate-800 flex justify-end">
+        <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold font-sans transition"
+            className="px-4 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold font-sans shadow-sm transition"
           >
             Close
           </button>

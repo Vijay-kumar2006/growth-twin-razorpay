@@ -1,62 +1,65 @@
 'use client';
 
 import React from 'react';
-import { Zap, Activity, Github, Layers, Bot, Sliders, TrendingUp, BookOpen, Sparkles } from 'lucide-react';
+import { ShieldCheck, Bot, Package, Sliders, TrendingUp, Code2, RotateCcw, FlaskConical } from 'lucide-react';
 
-export type DashboardTab = 'buyer-studio' | 'catalog' | 'guardrails' | 'analytics';
+export type DashboardTab = 'buyer-studio' | 'catalog' | 'guardrails' | 'analytics' | 'eval-lab';
 
 interface NavbarProps {
   activeTab: DashboardTab;
   onTabChange: (tab: DashboardTab) => void;
-  onRunBenchmarks: () => void;
-  onOpenDocs: () => void;
+  onToggleDevMode: () => void;
+  isDevModeOpen: boolean;
   onOpenConnectStore?: () => void;
   liveStoreName?: string | null;
-  benchmarksLoading?: boolean;
+  onResetScenario?: () => void;
 }
 
 export default function Navbar({
   activeTab,
   onTabChange,
-  onRunBenchmarks,
-  onOpenDocs,
+  onToggleDevMode,
+  isDevModeOpen,
   onOpenConnectStore,
   liveStoreName,
-  benchmarksLoading,
+  onResetScenario,
 }: NavbarProps) {
   const isLive = Boolean(liveStoreName && !liveStoreName.includes('Demo'));
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-[#090C15]/95 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        
-        {/* Brand Logo with Resence Subtitle */}
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
+      {/* Main Bar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+
+        {/* Brand Logo & Product Identity */}
         <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#0C8CE9] to-[#3395FF] flex items-center justify-center shadow-lg shadow-[#0C8CE9]/25">
-              <Zap className="w-4 h-4 text-white fill-white" />
+          <div className="flex items-center space-x-3 cursor-pointer select-none" onClick={() => onTabChange('buyer-studio')}>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-700 flex items-center justify-center shadow-md shadow-indigo-600/20 ring-1 ring-indigo-500/20">
+              <ShieldCheck className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="flex items-center space-x-1.5 leading-none">
-                <span className="font-extrabold text-white text-base tracking-tight">Razor<span className="text-[#3395FF]">Agent</span></span>
-                <span className="text-[9px] px-1 py-0.2 rounded font-mono font-bold bg-[#0C8CE9]/20 text-[#3395FF] border border-[#0C8CE9]/30">
-                  MCP
+              <div className="flex items-center space-x-2">
+                <span className="font-extrabold text-slate-900 text-base tracking-tight">
+                  Growth Twin <span className="text-indigo-600 font-black">Razorpay</span>
+                </span>
+                <span className="text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  AI AGENT
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-slate-400 font-semibold tracking-wider flex items-center gap-0.5 mt-0.5">
-                by <span className="text-white font-bold">Resence</span>
-              </span>
+              <p className="text-[10px] text-slate-500 font-medium tracking-wide hidden sm:block">
+                Merchant-Controlled Autonomous Commerce & Guardrails
+              </p>
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <nav className="hidden md:flex items-center space-x-1 pl-4 border-l border-slate-800">
+          {/* Clean Merchant-Facing Navigation Tabs */}
+          <nav className="hidden md:flex items-center space-x-1 pl-4 border-l border-slate-200">
             <button
               onClick={() => onTabChange('buyer-studio')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 ${
                 activeTab === 'buyer-studio'
-                  ? 'bg-[#121E33] text-[#3395FF] border border-[#0C8CE9]/40 font-bold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#0E1322]'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Bot className="w-3.5 h-3.5" />
@@ -65,122 +68,140 @@ export default function Navbar({
 
             <button
               onClick={() => onTabChange('catalog')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 ${
                 activeTab === 'catalog'
-                  ? 'bg-[#121E33] text-[#3395FF] border border-[#0C8CE9]/40 font-bold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#0E1322]'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Store Catalog</span>
+              <Package className="w-3.5 h-3.5" />
+              <span>Corporate Gifting Catalog</span>
             </button>
 
             <button
               onClick={() => onTabChange('guardrails')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 ${
                 activeTab === 'guardrails'
-                  ? 'bg-[#121E33] text-[#3395FF] border border-[#0C8CE9]/40 font-bold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#0E1322]'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Sliders className="w-3.5 h-3.5" />
-              <span>Guardrails</span>
+              <span>Guardrails & Policy</span>
             </button>
 
             <button
               onClick={() => onTabChange('analytics')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 ${
                 activeTab === 'analytics'
-                  ? 'bg-[#121E33] text-[#3395FF] border border-[#0C8CE9]/40 font-bold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#0E1322]'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <TrendingUp className="w-3.5 h-3.5" />
               <span>Analytics</span>
             </button>
+
+            <button
+              onClick={() => onTabChange('eval-lab')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 ${
+                activeTab === 'eval-lab'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <FlaskConical className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Evaluation Lab</span>
+            </button>
           </nav>
         </div>
 
-        {/* Right Actions */}
+        {/* Right Status Indicator, Reset Action & Dev Mode Toggle */}
         <div className="flex items-center space-x-2">
-          
-          {/* Connect Store Button with Honest Status Indicator */}
+          {/* New Scenario / Reset Button */}
+          {onResetScenario && (
+            <button
+              onClick={onResetScenario}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 shadow-xs transition"
+              title="Reset current quote, payment, and audit state"
+            >
+              <RotateCcw className="w-3 h-3 text-slate-500" />
+              <span className="hidden sm:inline">Reset / New Scenario</span>
+            </button>
+          )}
+
+          {/* Demo Mode / Live Store Status Badge */}
           <button
             onClick={onOpenConnectStore}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
               isLive
-                ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/50'
-                : 'bg-amber-950/30 border-amber-500/40 text-amber-300 hover:bg-amber-900/40'
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
+                : 'bg-amber-50 border-amber-300/80 text-amber-800 hover:bg-amber-100'
             }`}
+            title="Click to toggle store connection mode"
           >
-            <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
-            <span className="font-bold">{isLive ? '🟢 Live Store' : '🟡 Demo Mode'}</span>
-            <span className="hidden lg:inline text-[10px] text-slate-400 pl-1 border-l border-slate-700">Connect</span>
+            <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+            <span className="font-bold font-mono">{isLive ? 'Live Store' : 'Demo/Test Simulation'}</span>
           </button>
 
+          {/* Developer Mode Collapsed Button */}
           <button
-            onClick={onOpenDocs}
-            className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#141C2E] hover:bg-[#1A263E] text-slate-300 border border-slate-700 transition"
+            onClick={onToggleDevMode}
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${
+              isDevModeOpen
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 shadow-xs'
+            }`}
+            title="Toggle Developer & Inspector Mode (Benchmarks, Docs, GitHub)"
           >
-            <BookOpen className="w-3.5 h-3.5 text-[#3395FF]" />
-            <span>Docs</span>
+            <Code2 className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="hidden lg:inline">Developer Mode</span>
           </button>
-
-          <button
-            onClick={onRunBenchmarks}
-            disabled={benchmarksLoading}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#141C2E] hover:bg-[#1A263E] text-slate-300 border border-slate-700 transition"
-          >
-            <Activity className={`w-3.5 h-3.5 text-[#3395FF] ${benchmarksLoading ? 'animate-spin' : ''}`} />
-            <span>{benchmarksLoading ? 'Running...' : 'Run Tests'}</span>
-          </button>
-
-          <a
-            href="https://github.com/Piyush-Thakur7/razoragent"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0C8CE9] hover:bg-[#0972BD] text-white shadow-md shadow-[#0C8CE9]/20 transition"
-          >
-            <Github className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">GitHub</span>
-          </a>
         </div>
 
       </div>
 
       {/* Mobile Tab Bar */}
-      <div className="flex md:hidden px-4 py-2 border-t border-slate-800/80 bg-[#0A0D16] overflow-x-auto space-x-1">
+      <div className="flex md:hidden px-4 py-2 border-t border-slate-200 bg-slate-50 overflow-x-auto space-x-1.5 scrollbar-none">
         <button
           onClick={() => onTabChange('buyer-studio')}
-          className={`px-2.5 py-1 text-[11px] rounded-lg font-medium shrink-0 ${
-            activeTab === 'buyer-studio' ? 'bg-[#121E33] text-[#3395FF]' : 'text-slate-400'
+          className={`px-3 py-1 text-xs rounded-lg font-medium shrink-0 ${
+            activeTab === 'buyer-studio' ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200' : 'text-slate-600'
           }`}
         >
           AI Studio
         </button>
         <button
           onClick={() => onTabChange('catalog')}
-          className={`px-2.5 py-1 text-[11px] rounded-lg font-medium shrink-0 ${
-            activeTab === 'catalog' ? 'bg-[#121E33] text-[#3395FF]' : 'text-slate-400'
+          className={`px-3 py-1 text-xs rounded-lg font-medium shrink-0 ${
+            activeTab === 'catalog' ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200' : 'text-slate-600'
           }`}
         >
           Catalog
         </button>
         <button
           onClick={() => onTabChange('guardrails')}
-          className={`px-2.5 py-1 text-[11px] rounded-lg font-medium shrink-0 ${
-            activeTab === 'guardrails' ? 'bg-[#121E33] text-[#3395FF]' : 'text-slate-400'
+          className={`px-3 py-1 text-xs rounded-lg font-medium shrink-0 ${
+            activeTab === 'guardrails' ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200' : 'text-slate-600'
           }`}
         >
           Guardrails
         </button>
         <button
           onClick={() => onTabChange('analytics')}
-          className={`px-2.5 py-1 text-[11px] rounded-lg font-medium shrink-0 ${
-            activeTab === 'analytics' ? 'bg-[#121E33] text-[#3395FF]' : 'text-slate-400'
+          className={`px-3 py-1 text-xs rounded-lg font-medium shrink-0 ${
+            activeTab === 'analytics' ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200' : 'text-slate-600'
           }`}
         >
           Analytics
+        </button>
+        <button
+          onClick={() => onTabChange('eval-lab')}
+          className={`px-3 py-1 text-xs rounded-lg font-medium shrink-0 ${
+            activeTab === 'eval-lab' ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200' : 'text-slate-600'
+          }`}
+        >
+          Eval Lab
         </button>
       </div>
 

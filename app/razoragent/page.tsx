@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Navbar, { DashboardTab } from '@/components/razoragent/Navbar';
+import DeveloperDrawer from '@/components/razoragent/DeveloperDrawer';
 import AgentTerminal from '@/components/razoragent/AgentTerminal';
 import PolicyInspector from '@/components/razoragent/PolicyInspector';
 import OrderReceiptCard from '@/components/razoragent/OrderReceiptCard';
@@ -11,14 +12,27 @@ import BenchmarkModal from '@/components/razoragent/BenchmarkModal';
 import RazorpayCheckoutModal from '@/components/razoragent/RazorpayCheckoutModal';
 import IntegrationDocsModal from '@/components/razoragent/IntegrationDocsModal';
 import ConnectStoreModal from '@/components/razoragent/ConnectStoreModal';
-import WebhookStream, { WebhookEventItem } from '@/components/razoragent/WebhookStream';
-import { GuardrailPolicyConfig, SimulationResult, TestResult } from '@/lib/razoragent/types';
+import WebhookStream, { AuditEventItem } from '@/components/razoragent/WebhookStream';
+import EvaluationLab from '@/components/razoragent/EvaluationLab';
+import { GuardrailPolicyConfig, SimulationResult, TestResult, CartQuote } from '@/lib/razoragent/types';
+import {
+  GrowthTwinTransactionState,
+  createInitialTransactionState,
+  populateFromSimulation,
+  applyTradeoffAlternative,
+  triggerPaymentFailure,
+  applyRecoveryOption,
+  grantExplicitApproval,
+  completePayment
+} from '@/lib/razoragent/transaction-state';
 
 export default function RazorAgentPage() {
   const [activeTab, setActiveTab] = useState<DashboardTab>('buyer-studio');
+  const [isDevModeOpen, setIsDevModeOpen] = useState(false);
+
+  // Single Source of Truth Transaction State
+  const [txState, setTxState] = useState<GrowthTwinTransactionState>(createInitialTransactionState());
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<{ verified: boolean; status: string; signature?: string } | null>(null);
 
   // Razorpay Checkout Modal
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -30,30 +44,28 @@ export default function RazorAgentPage() {
   const [isConnectOpen, setIsConnectOpen] = useState(false);
   const [liveStoreName, setLiveStoreName] = useState<string | null>(null);
 
-  // Live Webhook Events
-  const [webhookEvents, setWebhookEvents] = useState<WebhookEventItem[]>([
-    {
-      id: 'evt_init_8921',
-      eventType: 'policy.evaluated',
-      timestamp: new Date(Date.now() - 1000 * 120).toISOString(),
-      signature: 'hmac_sha256_d89f2a78103c8b1',
-      verified: true,
-      payload: {
-        guardrail: 'DETERMINISTIC_SPEND_CAP',
-        maxLimitINR: 5000,
-        status: 'ACTIVE',
-      },
-    },
-  ]);
-
   // Benchmarks Modal state
   const [isBenchmarkOpen, setIsBenchmarkOpen] = useState(false);
   const [benchmarkResults, setBenchmarkResults] = useState<TestResult[] | null>(null);
   const [benchmarkLoading, setBenchmarkLoading] = useState(false);
 
+  // 1. Run Simulation Loop
   const handleRunSimulation = async (prompt: string) => {
-    setIsLoading(true);
-    setVerificationResult(null);
+    setTxState((prev) => ({
+      ...prev,
+      isLoading: true,
+      errorMessage: null,
+      lastActionMessage: 'Parsing buyer intent and querying catalog...',
+    }));
+
+    // Add intent audit event
+    const intentEvent: AuditEventItem = {
+      id: `evt_int_${Math.random().toString(36).substring(2, 8)}`,
+      eventType: 'INTENT_RECEIVED',
+      timestamp: new Date().toISOString(),
+      plainText: `Buyer agent intent parsed: "${prompt}"`,
+      payload: { prompt, timestamp: new Date().toISOString() },
+    };
 
     try {
       const res = await fetch('/api/razoragent/agent/simulate', {
@@ -65,33 +77,51 @@ export default function RazorAgentPage() {
       const data: SimulationResult = await res.json();
       setSimulationResult(data);
 
-      // Add live webhook events for this execution
-      if (data.order) {
-        const newEvents: WebhookEventItem[] = [
-          {
-            id: `evt_ord_${Math.random().toString(36).substring(2, 8)}`,
-            eventType: 'order.created',
-            timestamp: new Date().toISOString(),
-            signature: `hmac_sha256_${Math.random().toString(36).substring(2, 14)}`,
-            verified: true,
-            payload: {
-              orderId: data.order.id,
-              amount: data.order.amount,
-              currency: 'INR',
-              agentId: 'agent_buyer_01',
-              idempotencyLock: 'LOCKED',
-            },
-          },
-        ];
-        setWebhookEvents((prev) => [...newEvents, ...prev]);
-      }
+      setTxState((prev) => {
+        const nextState = populateFromSimulation(
+          prev,
+          prompt,
+          data.finalCart,
+          data.policyDecision,
+          data.order
+        );
+        return {
+          ...nextState,
+          auditEvents: [intentEvent, ...nextState.auditEvents],
+        };
+      });
     } catch (err) {
       console.error('Agent simulation error:', err);
-    } finally {
-      setIsLoading(false);
+      setTxState((prev) => ({
+        ...prev,
+        isLoading: false,
+        errorMessage: 'Network error communicating with AI Buyer simulation endpoint.',
+        lastActionMessage: 'Simulation request failed.',
+      }));
     }
   };
 
+  // 2. Safe Negotiation: Materialize Selected Trade-off Alternative
+  const handleTradeoffSelect = (optionId: string) => {
+    setTxState((prev) => applyTradeoffAlternative(prev, optionId));
+  };
+
+  // 3. Adaptive Recovery: Trigger Simulated Payment Failure
+  const handleSimulatePaymentFailure = () => {
+    setTxState((prev) => triggerPaymentFailure(prev));
+  };
+
+  // 4. Adaptive Recovery: Apply Selected Recovery Route
+  const handleSelectRecoveryOption = (optionId: string) => {
+    setTxState((prev) => applyRecoveryOption(prev, optionId));
+  };
+
+  // 5. Merchant Approval Sign-off
+  const handleApproveQuote = () => {
+    setTxState((prev) => grantExplicitApproval(prev));
+  };
+
+  // 6. Payment Success Settlement
   const handlePaymentSuccess = async (orderId: string, paymentId: string, signature: string) => {
     try {
       const res = await fetch('/api/razoragent/orders/verify', {
@@ -101,29 +131,24 @@ export default function RazorAgentPage() {
       });
 
       const data = await res.json();
-      setVerificationResult(data);
-
-      // Dispatch Webhook event
-      const captureEvent: WebhookEventItem = {
-        id: `evt_pay_${Math.random().toString(36).substring(2, 8)}`,
-        eventType: 'payment.captured',
-        timestamp: new Date().toISOString(),
-        signature: data.signature || signature,
-        verified: data.verified,
-        payload: {
-          orderId,
-          paymentId,
-          status: 'CAPTURED_AND_SETTLED',
-          method: 'UPI_STANDARD',
-          feePaise: Math.round(Number(simulationResult?.finalCart?.totalAmount || 0) * 2),
-        },
-      };
-      setWebhookEvents((prev) => [captureEvent, ...prev]);
+      setTxState((prev) => completePayment(prev, paymentId, data));
     } catch (err) {
       console.error('Payment verification error:', err);
+      setTxState((prev) => ({
+        ...prev,
+        errorMessage: 'Simulated payment verification failed.',
+      }));
     }
   };
 
+  // 7. Reset / New Scenario
+  const handleResetScenario = () => {
+    setTxState(createInitialTransactionState());
+    setSimulationResult(null);
+    setIsCheckoutOpen(false);
+  };
+
+  // 8. Run Benchmarks
   const handleRunBenchmarks = async () => {
     setIsBenchmarkOpen(true);
     setBenchmarkLoading(true);
@@ -139,6 +164,7 @@ export default function RazorAgentPage() {
     }
   };
 
+  // 9. Policy Config Change
   const handlePolicyConfigChange = async (newConfig: GuardrailPolicyConfig) => {
     try {
       await fetch('/api/razoragent/guardrails', {
@@ -153,87 +179,121 @@ export default function RazorAgentPage() {
 
   const handleSelectProductToTest = (productName: string) => {
     setActiveTab('buyer-studio');
-    handleRunSimulation(`Find and purchase ${productName} with eligible discount coupon`);
+    handleRunSimulation(`Order ${productName} with corporate discount coupon CORP15`);
   };
 
+  // Synthesize CartQuote object from current transaction state for child modal compatibility
+  const activeCartQuote: CartQuote | null = txState.quoteId ? {
+    cartId: txState.quoteId,
+    items: txState.cartItems,
+    subtotal: txState.baseValue + txState.addonValue,
+    discount: txState.discount,
+    tax: txState.tax,
+    shipping: txState.shipping,
+    totalAmount: txState.finalTotal,
+    currency: 'INR',
+    expiresAt: txState.expiresAt || undefined,
+  } : null;
+
+  const activeOrder = txState.orderId ? {
+    id: txState.orderId,
+    entity: 'order' as const,
+    amount: txState.orderAmountPaise || txState.finalTotal * 100,
+    amount_paid: txState.paymentStatus === 'PAID_SETTLED' ? (txState.orderAmountPaise || txState.finalTotal * 100) : 0,
+    amount_due: txState.paymentStatus === 'PAID_SETTLED' ? 0 : (txState.orderAmountPaise || txState.finalTotal * 100),
+    currency: 'INR' as const,
+    receipt: txState.orderReceipt || `rcpt_${txState.quoteId}`,
+    status: (txState.paymentStatus === 'PAID_SETTLED' ? 'paid' : 'created') as 'created' | 'attempted' | 'paid',
+    attempts: 1,
+    notes: {},
+    created_at: Math.floor(Date.now() / 1000),
+  } : null;
+
   return (
-    <div className="min-h-screen bg-[#07090F] text-slate-100 font-sans antialiased selection:bg-[#0C8CE9] selection:text-white flex flex-col">
-      {/* Navbar with Section Tabs */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-500/20 selection:text-indigo-900 flex flex-col">
+      {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onRunBenchmarks={handleRunBenchmarks}
-        onOpenDocs={() => setIsDocsOpen(true)}
+        onToggleDevMode={() => setIsDevModeOpen(!isDevModeOpen)}
+        isDevModeOpen={isDevModeOpen}
         onOpenConnectStore={() => setIsConnectOpen(true)}
         liveStoreName={liveStoreName}
+        onResetScenario={handleResetScenario}
+      />
+
+      {/* Collapsible Developer Mode Drawer */}
+      <DeveloperDrawer
+        isOpen={isDevModeOpen}
+        onClose={() => setIsDevModeOpen(false)}
+        onRunBenchmarks={handleRunBenchmarks}
+        onOpenDocs={() => setIsDocsOpen(true)}
         benchmarksLoading={benchmarkLoading}
       />
 
-      {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
-        
-        {/* Tab 1: AI Buyer Studio */}
+      {/* Main Merchant Content Area */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+        {/* Tab 1: AI Buyer Studio (Default Landing Screen) */}
         {activeTab === 'buyer-studio' && (
-          <div className="space-y-4">
-            <div className="px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-              <p>
-                Reference deployment for the <code className="text-slate-200 font-mono">razoragent</code> npm package. In production, merchants host this gateway on their own infrastructure.
-              </p>
-              <a
-                href="https://github.com/Piyush-Thakur7/razoragent"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#3395FF] hover:underline font-medium ml-3 shrink-0"
-              >
-                GitHub →
-              </a>
-            </div>
-
+          <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Left Terminal (7 Cols) */}
-              <div className="lg:col-span-7 h-[680px]">
+
+              {/* Left Column: Interactive AI Buyer Studio (7 Cols) */}
+              <div className="lg:col-span-7">
                 <AgentTerminal
-                  onRunSimulation={handleRunSimulation}
-                  isLoading={isLoading}
+                  state={txState}
                   simulationResult={simulationResult}
-                  liveStoreName={liveStoreName}
-                  onOpenConnectStore={() => setIsConnectOpen(true)}
-                />
-              </div>
-
-              {/* Right Settlement Card & Live Webhook (5 Cols) */}
-              <div className="lg:col-span-5 space-y-6">
-                <OrderReceiptCard
-                  order={simulationResult?.order || null}
-                  cart={simulationResult?.finalCart || null}
+                  onRunSimulation={handleRunSimulation}
                   onOpenCheckoutModal={() => setIsCheckoutOpen(true)}
-                  verificationResult={verificationResult}
+                  onSelectTradeoff={handleTradeoffSelect}
+                  onTriggerPaymentFailure={handleSimulatePaymentFailure}
+                  onSelectRecoveryOption={handleSelectRecoveryOption}
+                  onApproveQuote={handleApproveQuote}
+                  onResetScenario={handleResetScenario}
+                  liveStoreName={liveStoreName}
+                />
+              </div>
+
+              {/* Right Column: Settlement Receipt Card & Plain-Language Audit Trail (5 Cols) */}
+              <div className="lg:col-span-5 space-y-5">
+                <OrderReceiptCard
+                  state={txState}
+                  onOpenCheckoutModal={() => setIsCheckoutOpen(true)}
                 />
 
-                <WebhookStream events={webhookEvents} />
+                <WebhookStream events={txState.auditEvents} />
               </div>
+
             </div>
           </div>
         )}
 
-        {/* Tab 2: Store Catalog */}
+        {/* Tab 2: Corporate Gifting Catalog */}
         {activeTab === 'catalog' && (
           <MerchantCatalogView onSelectProductToTest={handleSelectProductToTest} />
         )}
 
-        {/* Tab 3: Guardrails Config */}
+        {/* Tab 3: Guardrails & Policy Screen */}
         {activeTab === 'guardrails' && (
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="max-w-4xl mx-auto space-y-6">
             <PolicyInspector onConfigChange={handlePolicyConfigChange} />
-            <WebhookStream events={webhookEvents} />
+            <WebhookStream events={txState.auditEvents} />
           </div>
         )}
 
-        {/* Tab 4: Analytics */}
+        {/* Tab 4: Analytics Screen (Clearly Labeled Demo Telemetry) */}
         {activeTab === 'analytics' && (
           <div className="max-w-4xl mx-auto space-y-6">
-            <MerchantAnalytics />
-            <WebhookStream events={webhookEvents} />
+            <MerchantAnalytics state={txState} />
+            <WebhookStream events={txState.auditEvents} />
+          </div>
+        )}
+
+        {/* Tab 5: Evaluation Lab (Deterministic Synthetic Suite) */}
+        {activeTab === 'eval-lab' && (
+          <div className="max-w-6xl mx-auto space-y-6">
+            <EvaluationLab />
           </div>
         )}
 
@@ -252,8 +312,8 @@ export default function RazorAgentPage() {
       <RazorpayCheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
-        order={simulationResult?.order || null}
-        cart={simulationResult?.finalCart || null}
+        order={activeOrder}
+        cart={activeCartQuote}
         onPaymentSuccess={handlePaymentSuccess}
       />
 
@@ -263,21 +323,7 @@ export default function RazorAgentPage() {
         onClose={() => setIsDocsOpen(false)}
       />
 
-      {/* Footer with Resence Branding */}
-      <footer className="border-t border-slate-900 bg-[#06080E] py-4 text-center text-slate-500 text-xs font-mono">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center space-x-1.5">
-            <span className="text-white font-bold">RazorAgent</span>
-            <span className="text-slate-400">by</span>
-            <span className="text-[#3395FF] font-extrabold tracking-wider">RESENCE</span>
-          </div>
-          <p className="text-[11px] text-slate-400">
-            Engineered by Piyush Singh · Enterprise MCP Commerce Gateway
-          </p>
-        </div>
-      </footer>
-
-      {/* Benchmark Modal */}
+      {/* Benchmark / Test Suite Modal */}
       <BenchmarkModal
         isOpen={isBenchmarkOpen}
         onClose={() => setIsBenchmarkOpen(false)}
@@ -285,6 +331,34 @@ export default function RazorAgentPage() {
         isLoading={benchmarkLoading}
         onRerun={handleRunBenchmarks}
       />
+
+      {/* Merchant-Facing Footer */}
+      <footer className="border-t border-slate-200 bg-white py-4 text-slate-500 text-xs font-sans">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center space-x-2">
+            <span className="text-slate-900 font-bold">Growth Twin for Razorpay</span>
+            <span className="text-slate-300">·</span>
+            <span className="text-slate-500">Autonomous MCP Commerce & Settlement Gateway</span>
+          </div>
+
+          <div className="flex items-center space-x-4 font-mono text-[11px] text-slate-500">
+            <button onClick={() => setIsDocsOpen(true)} className="hover:text-indigo-600 transition">
+              Docs
+            </button>
+            <button onClick={handleRunBenchmarks} className="hover:text-indigo-600 transition">
+              Run Tests
+            </button>
+            <a
+              href="https://github.com/Vijay-kumar2006/growth-twin-razorpay"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-600 hover:underline"
+            >
+              GitHub →
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
